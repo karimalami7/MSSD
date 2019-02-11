@@ -10,7 +10,7 @@
 #
 #	-c : cycles = generations
 #
-#	-d : d = space or number of attributes
+#	-d : space or number of attributes
 #
 #	-t : NBTHREARDS = number of parallel threads to be run.
 #
