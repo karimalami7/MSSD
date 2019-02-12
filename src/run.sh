@@ -16,4 +16,26 @@
 #
 # 	-b : batch interval
 
-./main -f INDE -k 100 -o 43200 -c 2 -d 8 -t 4 -b 600
+./main -f INDE -k 100 -o 43200 -c 2 -d 12 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 43200 -c 2 -d 14 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 43200 -c 2 -d 16 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 86400 -c 2 -d 12 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 86400 -c 2 -d 14 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 86400 -c 2 -d 16 -t 4 -b 1200
+
+./main -f INDE -k 100 -o 432000 -c 2 -d 12 -t 4 -b 12000
+
+./main -f INDE -k 100 -o 432000 -c 2 -d 14 -t 4 -b 12000
+
+./main -f INDE -k 100 -o 432000 -c 2 -d 16 -t 4 -b 12000
+
+./main -f INDE -k 100 -o 864000 -c 2 -d 12 -t 4 -b 12000
+
+./main -f INDE -k 100 -o 864000 -c 2 -d 14 -t 4 -b 12000
+
+./main -f INDE -k 100 -o 864000 -c 2 -d 16 -t 4 -b 12000

@@ -159,6 +159,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
     cerr << "data size = " << n <<endl;
     cerr << "omega = " << omega <<endl; 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
+    cerr << "Space = " << d <<endl;
 
     int timestamp=0;
 
@@ -169,10 +170,9 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
 
     list<TableTuple> mainDataSet;
     list<TableTuple> mainTopmost;
-    TableTuple DBSky;
     Space All=(1<<d)-1;
+    vector<TableTuple> DBSky(All);
     vector<TableTuple> DBRest(All);
-    int query_time=7;
 
     while(timestamp <=omega+2*bufferMaxSize){
 
@@ -185,7 +185,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
 
             // Buffer at its maximum size, time to update and clear the buffer
 
-            cerr << "at timestamp: "<< timestamp <<", time to update" << endl;
+            //cerr << "at timestamp: "<< timestamp <<", time to update" << endl;
 
             //step 1: push buffer to main dataset, remove outdated block if it exists
 
@@ -201,16 +201,13 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
             for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
-            int DBSkySize=0;
-            int DBRestSize=0;
             // loop on all subspaces
+            #pragma omp parallel for num_threads(23) schedule(dynamic)
             for (int i=0;i<vectSpaceN.size();i++){
 
                 // step 21: compute DBSky
-
-                TableTuple Skyline;
-                Skyline=subspaceSkylineSize_TREE(vectSpaceN[i], valid_data);
-                DBSkySize+=Skyline.size(); 
+        
+                DBSky[i]=subspaceSkylineSize_TREE(vectSpaceN[i], valid_data);
                 
                 // step 22: compute DBRest, skyline of buffer + previous DBRest
                 // dont compute for the first iteration
@@ -225,7 +222,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
                     vector<int> DBRest_ids;
                     vector<int> Skyline_ids;
                     for (int k=0;k<DBRest[i].size();k++) DBRest_ids.push_back(DBRest[i][k][0]);
-                    for (int k=0;k<Skyline.size();k++) Skyline_ids.push_back(Skyline[k][0]);
+                    for (int k=0;k<DBSky[i].size();k++) Skyline_ids.push_back(DBSky[i][k][0]);
                     std::sort(DBRest_ids.begin(), DBRest_ids.begin()+DBRest_ids.size());
                     std::sort(Skyline_ids.begin(), Skyline_ids.begin()+Skyline_ids.size());
                     vector<int> v(DBRest_ids.size()+Skyline_ids.size());                 
@@ -240,20 +237,24 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
                         }
                     }
                     DBRest[i].swap(DBRest_minus_Skyline);
-                    DBRestSize+=DBRest[i].size();
+                    
                 }
             }
-            cout << "DBSky size: "<<DBSkySize<<endl;
-            cout << "DBRest size: "<<DBRestSize<<endl;
-            cout << "DBSky + DBRest: "<<DBSkySize+DBRestSize<<endl;
-            //step: compute DBRest, skyline of buffer + DBRest
-
 
             // last step: clear buffer
             buffer.clear();
         }
         timestamp++;
     }
+    
+    int DBSkySize=0;
+    int DBRestSize=0;
+    for (int i=0;i<vectSpaceN.size();i++) DBSkySize+=DBSky[i].size(); 
+    for (int i=0;i<vectSpaceN.size();i++) DBRestSize+=DBRest[i].size();
+    cerr << "at timestamp: "<< timestamp <<", time to update" << endl;    
+    cerr << "DBSky size: "<<DBSkySize<<endl;
+    cerr << "DBRest size: "<<DBRestSize<<endl;
+    cerr << "DBSky + DBRest: "<<DBSkySize+DBRestSize<<endl;
 }
 
 
