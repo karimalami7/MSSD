@@ -4,7 +4,7 @@ using namespace std;
 
 namespace NEG{
 
-int NB_THREADS=4;
+int NB_THREADS=24;
 
 void triScore(TableTuple &donnees, Space d){
 //  Cette procédure trie les données suivant le score (somme des valeurs des attributs)
@@ -314,7 +314,7 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
         it_bloc_data++;it_bloc_pair++; // the first one does not to be updated
 
         // on boucle sur tous les blocs de tuples existants
-
+        int block_position=0;
         while (it_bloc_data!=mainDataset.end()){
 
             #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
@@ -331,43 +331,44 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
                 }
 
                 // Pour compression cascade
-                // vector<list<DualSpace>> pairsToCompress;
+                vector<list<DualSpace>> pairsToCompress;
 
-                // list<DualSpace> maListe;
-                // for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
+                list<DualSpace> maListe;
+                for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
                 
-                // pairsToCompress.push_back(maListe);
+                pairsToCompress.push_back(maListe);
 
-                // for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
-                //     list<DualSpace> pairs;
-                //     for(auto it_us = it_list->begin(); it_us!=it_list->end();it_us++){
-                //         pairs.push_back(*it_us);
-                //     }  
-                //     pairsToCompress.push_back(pairs);
-                // }
+                for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
+                    list<DualSpace> pairs;
+                    for(auto it_us = it_list->begin(); it_us!=it_list->end();it_us++){
+                        pairs.push_back(*it_us);
+                    }  
+                    pairsToCompress.push_back(pairs);
+                }
                 
 
                 // Compression locale
         
-                list<DualSpace> maListe;
-                for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
+                // list<DualSpace> maListe;
+                // for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
 
 
-                CompresserParInclusion(maListe);
-                usDS.clear();
-                usDS.insert(maListe.begin(),maListe.end());
+                // CompresserParInclusion(maListe);
+                // usDS.clear();
+                // usDS.insert(maListe.begin(),maListe.end());
     
-                fusionGloutonne(usDS,d);
+                // fusionGloutonne(usDS,d);
             
                 //on append les nouvelles paires
                 
-                (*it_bloc_pair)[i].push_front(usDS);
-                //(*it_bloc_pair)[i]=CompresserParInclusion_cascade(pairsToCompress,d);
+                //(*it_bloc_pair)[i].push_front(usDS);
+                (*it_bloc_pair)[i]=CompresserParInclusion_cascade_v2(pairsToCompress,d,block_position);
 
 
             }
             it_bloc_data++;
             it_bloc_pair++;
+            block_position++;
         }
     
     }   
@@ -464,7 +465,73 @@ ListUSetDualSpace CompresserParInclusion_cascade(vector<list<DualSpace>> &toComp
     return l;
 }
 
+ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Space d, int buck_position){
+
+
+    ListUSetDualSpace l;
+
+    int buck_processed=0;
+
+    for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector
+
+        if (buck_processed<=buck_position){
+        
+            USetDualSpace usDs;
+
+            CompresserParInclusion(toCompress[i]);
+
+            list<DualSpace> lds;
+
+            for (int j=0; j<=buck_position+1;j++){  // we gather more recent buck, i.e. j smaller than i  
+                if (j!=i){
+                    for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
+                        lds.push_front(*it);
+                    }
+                }
+            }
+
+            compresserParInclusion2liste(toCompress[i],lds);
+        
+            usDs.insert(toCompress[i].begin(),toCompress[i].end());
+
+            fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+
+            l.push_back(usDs);
+        }
+        else{
+
+            USetDualSpace usDs;
+
+            CompresserParInclusion(toCompress[i]);
+
+            list<DualSpace> lds;
+
+            for (int j=0; j<i;j++){  // we gather more recent buck, i.e. j smaller than i  
+                
+                for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
+                    lds.push_front(*it);
+                }
+               
+            }
+
+            compresserParInclusion2liste(toCompress[i],lds);
+        
+            usDs.insert(toCompress[i].begin(),toCompress[i].end());
+
+            fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+
+            l.push_back(usDs);
+        }
+
+        buck_processed++;
+    }
+
+    return l;
+}
+
 void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d ){
+
+    int block_position=0;
 
     for (auto it_listDataset=mainDataset.rbegin();it_listDataset!=mainDataset.rend();it_listDataset++){
 
@@ -497,7 +564,9 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
 
         }
 
-    ltVcLtUsDs.push_front(bloc_pairs); //bucket des paires des new tuples 
+        ltVcLtUsDs.push_front(bloc_pairs); //bucket des paires des new tuples 
+
+        block_position++;
 
     }
 

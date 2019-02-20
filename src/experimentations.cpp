@@ -36,7 +36,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     cerr << "data size = " << n <<endl;
     cerr << "omega = " << omega <<endl; 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
-
+    cerr << "Space = " << d <<endl;
 
     int timestamp=0;
 
@@ -243,6 +243,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
 
             // last step: clear buffer
             buffer.clear();
+            cerr << "at timestamp "<< timestamp<< ", duration is: " <<duree(timeToPerformAll) << endl;
         }
         timestamp++;
     }
@@ -286,10 +287,10 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
 
     // Run the framework
 
-    //Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+    Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
 
     // Experiment DBSKY
 
-    Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+    //Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
 }
 
