@@ -39,7 +39,7 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 void expiration(ListVectorListUSetDualSpace &listVcUSetDualSpace);
 
-ListUSetDualSpace CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d);
+void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d, ListUSetDualSpace & l);
 
 void CompresserParInclusion(list<DualSpace> &l);
 

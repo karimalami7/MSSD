@@ -270,33 +270,29 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 
 void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
-
+    //On calcule les paires des nouveaux tuples
     VectorListUSetDualSpace buffer_pairs(buffer.size());
-
+    //Pour chaque tuple t dans buffer, i.e., qu'on veut insérer
     #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
     for (int k=0; k<buffer.size(); k++){
 
         vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
-
+        //Pour chaque topmost de chaque bucket
         for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
-
              USetDualSpace usDs;
-
+            //Pour chaque tuple t' dans le topmost actuel, comparer t à t'
              for (int j=0; j <(*it_topmost).size();j++){
                  DualSpace ds;
                  ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
-                 usDs.insert(ds);
+                 usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
              }   
-
+            //On affecte l'ensemble de paires à une liste
             list<DualSpace> maListe;
             for(auto it=usDs.begin(); it!=usDs.end(); ++it)maListe.push_back(*it);
- 
             pairsToCompress.push_back(maListe);     
-             
         }
-
-        buffer_pairs[k]=CompresserParInclusion_cascade(pairsToCompress,d);
-
+        //Une fois tous les buckets de paires de t obtenues, on les compresse.
+        CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);
     }
 
     ltVcLtUsDs.push_front(buffer_pairs); //bucket des paires des new tuples 
@@ -305,13 +301,13 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
 
 void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
 
-
+    //On met à jour la liste de buckets de paires associée aux anciens tuples
     
     if(ltVcLtUsDs.size()>1){ // if it is not the case, then there is nothing to update
 
         auto it_bloc_data=mainDataset.begin();
         auto it_bloc_pair=ltVcLtUsDs.begin();
-        it_bloc_data++;it_bloc_pair++; // the first one does not to be updated
+        it_bloc_data++;it_bloc_pair++; // the first one does not need to be updated
 
         // on boucle sur tous les blocs de tuples existants
         int block_position=0;
@@ -433,10 +429,10 @@ s.sort(NEG::pet_pair);
 
 }
 
-ListUSetDualSpace CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d){
+void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d, ListUSetDualSpace &l){
 
 
-    ListUSetDualSpace l;
+  //  ListUSetDualSpace l;
 
     for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector
 
@@ -462,7 +458,7 @@ ListUSetDualSpace CompresserParInclusion_cascade(vector<list<DualSpace>> &toComp
         l.push_back(usDs);
     }
 
-    return l;
+ //   return l;
 }
 
 ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Space d, int buck_position){
@@ -502,11 +498,11 @@ ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toC
 
             USetDualSpace usDs;
 
-            CompresserParInclusion(toCompress[i]);
+            //CompresserParInclusion(toCompress[i]);
 
             list<DualSpace> lds;
 
-            for (int j=0; j<i;j++){  // we gather more recent buck, i.e. j smaller than i  
+            for (int j=0; j<1;j++){  // we gather more recent buck, i.e. j smaller than i  
                 
                 for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
                     lds.push_front(*it);
@@ -518,7 +514,7 @@ ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toC
         
             usDs.insert(toCompress[i].begin(),toCompress[i].end());
 
-            fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+            //fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
 
             l.push_back(usDs);
         }
@@ -560,7 +556,7 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
              
             }
            
-            bloc_pairs[i]=CompresserParInclusion_cascade(pairsToCompress,d);
+            CompresserParInclusion_cascade(pairsToCompress,d,bloc_pairs[i]);
 
         }
 
