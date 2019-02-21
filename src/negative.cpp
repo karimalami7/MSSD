@@ -470,35 +470,58 @@ ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toC
 
     for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector
 
-        if (buck_processed<=buck_position){
+        if (buck_processed<=buck_position+2){
         
-            USetDualSpace usDs;
+            if (i==0){
+                USetDualSpace usDs;
 
-            CompresserParInclusion(toCompress[i]);
+                CompresserParInclusion(toCompress[i]);
 
-            list<DualSpace> lds;
+                list<DualSpace> lds;
 
-            for (int j=0; j<=buck_position+1;j++){  // we gather more recent buck, i.e. j smaller than i  
-                if (j!=i){
-                    for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
-                        lds.push_front(*it);
+                for (int j=0; j<=buck_position+1;j++){  // we gather more recent buck, i.e. j smaller than i  
+                    if (j!=i){
+                        for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
+                            lds.push_front(*it);
+                        }
                     }
                 }
-            }
 
-            compresserParInclusion2liste(toCompress[i],lds);
+                compresserParInclusion2liste(toCompress[i],lds);
         
-            usDs.insert(toCompress[i].begin(),toCompress[i].end());
+                usDs.insert(toCompress[i].begin(),toCompress[i].end());
 
-            fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+                fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
 
-            l.push_back(usDs);
+                l.push_back(usDs);
+            
+            }
+            else{
+
+                USetDualSpace usDs;
+
+                list<DualSpace> lds;
+
+                for (int j=0; j<=buck_position+1;j++){  // we gather more recent buck, i.e. j smaller than i  
+                    if (j!=i){
+                        for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
+                            lds.push_front(*it);
+                        }
+                    }
+                }
+
+                compresserParInclusion2liste(toCompress[i],lds);
+        
+                usDs.insert(toCompress[i].begin(),toCompress[i].end());
+
+                l.push_back(usDs);
+            
+            }
+            
         }
         else{
 
             USetDualSpace usDs;
-
-            //CompresserParInclusion(toCompress[i]);
 
             list<DualSpace> lds;
 
@@ -513,8 +536,6 @@ ListUSetDualSpace CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toC
             compresserParInclusion2liste(toCompress[i],lds);
         
             usDs.insert(toCompress[i].begin(),toCompress[i].end());
-
-            //fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
 
             l.push_back(usDs);
         }

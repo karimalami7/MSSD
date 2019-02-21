@@ -125,7 +125,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             cerr<<endl;
         }
 
-        if (timestamp==omega+2*bufferMaxSize+query_time){
+        if (timestamp==omega+4*bufferMaxSize+query_time){
             // 4 Set header
             timeToPerformStep=debut();
             structureNSC.clear();
@@ -141,9 +141,9 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
             //query answering by NSC
-            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
+            //NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
+            //experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
             
             exit(0);
         }
@@ -202,7 +202,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
             // loop on all subspaces
-            #pragma omp parallel for num_threads(23) schedule(dynamic)
+            #pragma omp parallel for num_threads(24) schedule(dynamic)
             for (int i=0;i<vectSpaceN.size();i++){
 
                 // step 21: compute DBSky
@@ -287,10 +287,10 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
 
     // Run the framework
 
-    Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+    //Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
 
     // Experiment DBSKY
 
-    //Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+    Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
 }
 

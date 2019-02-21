@@ -16,5 +16,22 @@
 #
 # 	-b : batch interval
 
-./main -f INDE -k 100 -o 100000 -c 2 -d 6 -t 12 -b 1000
+for type in INDE ANTI
 
+do
+
+	for d in 8 12 16
+
+	do
+
+		./main -f $type -k 100 -o 43200 -c 2 -d $d -t 12 -b 1200
+
+		./main -f $type -k 100 -o 86400 -c 2 -d $d -t 12 -b 1200
+
+		./main -f $type -k 100 -o 432000 -c 2 -d $d -t 12 -b 12000
+
+		./main -f $type -k 100 -o 864000 -c 2 -d $d -t 12 -b 12000
+
+	done
+
+done
