@@ -25,11 +25,12 @@ int main(int argc,char **argv){
     int cycles;
     int omega;
     int bufferSize;
+    int method;
 
     int c = 0;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "f:k:o:c:d:t:b:")) != -1) {
+    while ((c = getopt(argc, argv, "f:k:o:c:d:t:b:m:")) != -1) {
         switch(c){
 
         case 'f':  
@@ -57,6 +58,9 @@ int main(int argc,char **argv){
         case 'b':
             bufferSize=atoi(optarg);
             break;
+        case 'm':
+            method=atoi(optarg);
+            break;
         default:
             if (isprint(optopt))
                 fprintf( stderr, "Unknown option `-%c'.\n", optopt);
@@ -66,7 +70,8 @@ int main(int argc,char **argv){
 
 
 	loadData(dataName, path, omega*cycles, d, k, donnees);
-    experimentation_menu(dataName, donnees, d, k, path, omega, bufferSize);
+    
+    experimentation_menu(dataName, donnees, d, k, path, omega, bufferSize, method);
 
     cerr <<"***************End****************"<< endl;
 
