@@ -1,6 +1,6 @@
 #include "experimentations.h"
 
-int NB_THREADS=24;
+int NB_THREADS=8;
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
@@ -38,6 +38,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     cerr << "omega = " << omega <<endl; 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
     cerr << "Space = " << d <<endl;
+    cerr << "Distrib = " << dataName <<endl;
 
     int timestamp=0;
 

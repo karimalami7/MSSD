@@ -21,17 +21,11 @@
 for type in INDE ANTI
 
 do
-	for dim in 8 12 16
+	for dim in 12
 
 	do
 
-		./main -f $type -k 100 -o 43200 -c 2 -d $dim -t 24 -b 1200 -m 2
-
-		./main -f $type -k 100 -o 86400 -c 2 -d $dim -t 24 -b 1200 -m 2
-
-		./main -f $type -k 100 -o 432000 -c 2 -d $dim -t 24 -b 1200 -m 2
-
-		./main -f $type -k 100 -o 864000 -c 2 -d $dim -t 24 -b 1200 -m 2
+		./main -f $type -k 100 -o 43200 -c 2 -d $dim -t 24 -b 1200 -m 1
 
 	done
 

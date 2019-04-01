@@ -270,12 +270,14 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 
 void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
+    Space All=(1<<d)-1;
+    int count=0;
     //On calcule les paires des nouveaux tuples
     VectorListUSetDualSpace buffer_pairs(buffer.size());
     //Pour chaque tuple t dans buffer, i.e., qu'on veut insérer
-    #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+    #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) reduction(+:count)
     for (int k=0; k<buffer.size(); k++){
-
+        bool all_yes=false;
         vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
         //Pour chaque topmost de chaque bucket
         for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
@@ -284,6 +286,7 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
              for (int j=0; j <(*it_topmost).size();j++){
                  DualSpace ds;
                  ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
+                 if (ds.dom==All){all_yes=true;}
                  usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
              }   
             //On affecte l'ensemble de paires à une liste
@@ -293,14 +296,16 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
         }
         //Une fois tous les buckets de paires de t obtenues, on les compresse.
         CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);
+        if(all_yes){count++;}
     }
 
     ltVcLtUsDs.push_front(buffer_pairs); //bucket des paires des new tuples 
-
+    cerr<< "number of All: "<<count<<endl;
 }
 
 void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
-
+    Space All=(1<<d)-1;
+    int count=0;
     //On met à jour la liste de buckets de paires associée aux anciens tuples
     
     if(ltVcLtUsDs.size()>1){ // if it is not the case, then there is nothing to update
@@ -313,15 +318,17 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
         int block_position=0;
         while (it_bloc_data!=mainDataset.end()){
 
-            #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+            #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) reduction(+:count)
     
             // on boucle sur tous les tuples d'un bloc 
             for (int i=0; i<(*it_bloc_data).size(); i++){
+                bool all_yes=false;
                 USetDualSpace usDS;
                 // on le compare au topmost des new_tuples
                 for (int j=0; j <topmostBuffer.size();j++){
                     DualSpace ds;
                     ds=NEG::domDualSubspace_1(topmostBuffer[j], (*it_bloc_data)[i], d);
+                    if (ds.dom==All){all_yes=true;}
                     usDS.insert(ds);
     
                 }
@@ -360,12 +367,13 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
                 //(*it_bloc_pair)[i].push_front(usDS);
                 (*it_bloc_pair)[i]=CompresserParInclusion_cascade_v2(pairsToCompress,d,block_position);
 
-
+                if(all_yes){count++;}
             }
             it_bloc_data++;
             it_bloc_pair++;
             block_position++;
         }
+        cerr<< "number of All: "<<count<<endl;
     
     }   
        
