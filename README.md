@@ -9,7 +9,7 @@ This repository includes MSSD sources as well as state of the art methods to ans
 To begin, please clone this repository. This software requires C++ compiler.
 
 ```shell 
-git clone https://github.com/MultiStreamSky/MSSD.git
+git clone https://github.com/karimalami7/MSSD.git
 ``` 
 
 Next, change current directory to ./src and compile the source code
