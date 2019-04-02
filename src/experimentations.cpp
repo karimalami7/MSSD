@@ -143,9 +143,9 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
             //query answering by NSC
-            //NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
+            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
             
             exit(0);
         }
