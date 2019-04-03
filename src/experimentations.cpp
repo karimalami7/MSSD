@@ -145,7 +145,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
+            //experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
             
             exit(0);
         }
