@@ -21,11 +21,38 @@
 for type in INDE ANTI
 
 do
-	for dim in 12
+
+	for d in 12
 
 	do
 
-		./main -f $type -k 100 -o 43200 -c 2 -d $dim -t 24 -b 1200 -m 1
+		# for o in  43200 86400
+
+		# do
+
+		# 	for b in 300   
+
+		# 	do
+
+		# 	./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
+
+		# 	done	
+
+		# done
+
+		for o in  432000 864000
+
+		do
+
+			for b in 3000 
+
+			do
+
+			./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
+
+			done	
+
+		done
 
 	done
 

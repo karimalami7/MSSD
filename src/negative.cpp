@@ -335,38 +335,38 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
                 }
                 if(!all_yes[i]){ // compress only if the tuple is not totally dominated
                 // Pour compression cascade
-                vector<list<DualSpace>> pairsToCompress;
+                // vector<list<DualSpace>> pairsToCompress;
 
-                list<DualSpace> maListe;
-                for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
+                // list<DualSpace> maListe;
+                // for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
                 
-                pairsToCompress.push_back(maListe);
+                // pairsToCompress.push_back(maListe);
 
-                for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
-                    list<DualSpace> pairs;
-                    for(auto it_us = it_list->begin(); it_us!=it_list->end();it_us++){
-                        pairs.push_back(*it_us);
-                    }  
-                    pairsToCompress.push_back(pairs);
-                }
+                // for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
+                //     list<DualSpace> pairs;
+                //     for(auto it_us = it_list->begin(); it_us!=it_list->end();it_us++){
+                //         pairs.push_back(*it_us);
+                //     }  
+                //     pairsToCompress.push_back(pairs);
+                // }
                 
 
                 // Compression locale
         
-                // list<DualSpace> maListe;
-                // for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
+                list<DualSpace> maListe;
+                for(auto it=usDS.begin(); it!=usDS.end(); ++it)maListe.push_back(*it);
 
 
-                // CompresserParInclusion(maListe);
-                // usDS.clear();
-                // usDS.insert(maListe.begin(),maListe.end());
+                CompresserParInclusion(maListe);
+                usDS.clear();
+                usDS.insert(maListe.begin(),maListe.end());
     
-                // fusionGloutonne(usDS,d);
+                fusionGloutonne(usDS,d);
             
                 //on append les nouvelles paires
                 
-                //(*it_bloc_pair)[i].push_front(usDS);
-                (*it_bloc_pair)[i]=CompresserParInclusion_cascade_v2(pairsToCompress,d,block_position);
+                (*it_bloc_pair)[i].push_front(usDS);
+                // (*it_bloc_pair)[i]=CompresserParInclusion_cascade_v2(pairsToCompress,d,block_position);
 
                 
             }

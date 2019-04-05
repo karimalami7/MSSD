@@ -1,6 +1,6 @@
 #include "experimentations.h"
 
-int NB_THREADS=8;
+int NB_THREADS=24;
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
@@ -142,11 +142,54 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
+
+            vector<Space> subspaceN_temp;
+            vector<vector<Space>> listNTabSpace_temp;
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10);
+
             //query answering by NSC
-            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+100);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+100);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+1000);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+1000);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10000);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10000);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
             exit(0);
         }
         timestamp++;
@@ -361,7 +404,7 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         
     // generate subspaces for queries
     Space spAux;
-    Space N=1000; //number of random queries
+    Space N=10000; //number of random queries
     Space All=(1<<d)-1; //number of queries in the skycube
     vector<Space> subspaceN;
     vector<vector<Space>> listNTabSpace(N);
@@ -387,7 +430,7 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
 
         case 1: 
             // Run the framework
-            Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+            Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceN, listNTabSpace);
             break;
         case 2: 
             // Experiment DBSKY
