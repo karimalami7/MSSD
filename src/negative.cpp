@@ -304,16 +304,21 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
             // for(auto it=usDs.begin(); it!=usDs.end(); ++it)maListe.push_back(*it);
             // pairsToCompress.push_back(maListe);     
         }
-        vector<list<DualSpace>> pairsToCompress_to_swap(mainTopmost.size());
+       
+        //vector<list<DualSpace>> pairsToCompress_to_swap(mainTopmost.size());
         bool find_all=false;
-        for (int i=pairsToCompress_to_swap.size() ;i>0 && !find_all;i--){
-            for (auto iter=pairsToCompress[i].begin(); iter!=pairsToCompress[i].end();i++){
+        int position_all=-1;
+        for (int i=0 ;i<pairsToCompress.size() && !find_all;i++){
+            for (auto iter=pairsToCompress[i].begin(); iter!=pairsToCompress[i].end();iter++){
                 if ((*iter).dom==All){
                     find_all=true;
+                    position_all=i;
                 }
             }
-            if(!find_all){
-                pairsToCompress_to_swap[i]
+        }
+        if(position_all!=-1){
+            for (int j=pairsToCompress.size()-1;j>position_all;j--){
+                pairsToCompress[j].clear();
             }
         }
         //Une fois tous les buckets de paires de t obtenues, on les compresse.
@@ -501,7 +506,7 @@ void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d
 
   //  ListUSetDualSpace l;
 
-    for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector
+    for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector, index 0
 
         USetDualSpace usDs;
 
