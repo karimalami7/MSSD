@@ -1,5 +1,6 @@
 #include "experimentations.h"
 
+int NB_THREADS=24;
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
@@ -37,6 +38,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     cerr << "omega = " << omega <<endl; 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
     cerr << "Space = " << d <<endl;
+    cerr << "Distrib = " << dataName <<endl;
 
     int timestamp=0;
 
@@ -140,11 +142,59 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
+
+            vector<Space> subspaceN_temp;
+            vector<vector<Space>> listNTabSpace_temp;
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+100);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+100);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+1000);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+1000);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+            subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10000);
+            listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10000);
+
+            //query answering by NSC
+            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            
+            subspaceN_temp.clear();
+            listNTabSpace_temp.clear();
+
+
             //query answering by NSC
             //NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
-            
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             exit(0);
         }
         timestamp++;
@@ -161,7 +211,7 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
     cerr << "Space = " << d <<endl;
 
-    int timestamp=0;
+    
 
     double timeToPerformAll;
     double timeToPerformStep;
@@ -170,100 +220,196 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
 
     list<TableTuple> mainDataSet;
     list<TableTuple> mainTopmost;
-    Space All=(1<<d)-1;
+    Space All=(1<<d);
     vector<TableTuple> DBSky(All);
     vector<TableTuple> DBRest(All);
 
-    while(timestamp <=omega+2*bufferMaxSize){
+    // before warm up
+    timeToPerformAll=debut();
+    TableTuple valid_data(donnees.begin(),donnees.begin()+omega);
+    cout <<valid_data[omega-1][0]<<endl;
+    cout <<"valid data size " << valid_data.size()<<endl;
+    #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+    for (Space subspace=1;subspace<All;subspace++){
 
-        buffer.push_back(donnees[timestamp]);
+        // DBSKY = skyline of valid data, we compute it with BSKYTREE
 
-        if (buffer.size()==bufferMaxSize){
+        DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], valid_data);
 
-            timeToPerformAll=debut();
-            timeToPerformStep=debut();
+        //cout << "DBSky of subspace: "<< subspace << ", size: "<<DBSky[subspace-1].size()<<endl;
 
-            // Buffer at its maximum size, time to update and clear the buffer
+        // DBREST = records that are dominated by more recent ones and not dominated by ancient one
 
-            //cerr << "at timestamp: "<< timestamp <<", time to update" << endl;
+        // 1 compute valid data minus DBSky 
 
-            //step 1: push buffer to main dataset, remove outdated block if it exists
+        TableTuple valid_data_minus_dbsky;
 
-            mainDataSet.push_front(buffer);
-            if (mainDataSet.size()==omega/bufferMaxSize+1){
-                mainDataSet.pop_back();
-            }
-
-            //step 2: compute DBSky skyline of valid data AND DBRest skyline of (buffer union previous DBRest) 
-
-            TableTuple valid_data;
-
-            for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
-                for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
-            }
-            // loop on all subspaces
-            #pragma omp parallel for num_threads(24) schedule(dynamic)
-            for (int i=0;i<vectSpaceN.size();i++){
-
-                // step 21: compute DBSky
-        
-                DBSky[i]=subspaceSkylineSize_TREE(vectSpaceN[i], valid_data);
-                
-                // step 22: compute DBRest, skyline of buffer + previous DBRest
-                // dont compute for the first iteration
-                if (timestamp>bufferMaxSize){
-                    TableTuple dataset_for_DBRest=buffer;
-                    // add DBRest[i] of the last iteration to dataset_for_DBRest
-                    for(auto it1=DBRest[i].begin(); it1!= DBRest[i].end(); it1++ ){
-                        dataset_for_DBRest.push_back(*it1);
-                    }
-                    DBRest[i]=subspaceSkylineSize_TREE(vectSpaceN[i], dataset_for_DBRest);
-                    // remove Skyline from DBRest[i]
-                    vector<int> DBRest_ids;
-                    vector<int> Skyline_ids;
-                    for (int k=0;k<DBRest[i].size();k++) DBRest_ids.push_back(DBRest[i][k][0]);
-                    for (int k=0;k<DBSky[i].size();k++) Skyline_ids.push_back(DBSky[i][k][0]);
-                    std::sort(DBRest_ids.begin(), DBRest_ids.begin()+DBRest_ids.size());
-                    std::sort(Skyline_ids.begin(), Skyline_ids.begin()+Skyline_ids.size());
-                    vector<int> v(DBRest_ids.size()+Skyline_ids.size());                 
-                    std::vector<int>::iterator it_minus;
-                    it_minus=std::set_difference (DBRest_ids.begin(), DBRest_ids.begin()+DBRest_ids.size(), 
-                        Skyline_ids.begin(), Skyline_ids.begin()+Skyline_ids.size(), v.begin());
-                    v.resize(it_minus-v.begin());
-                    TableTuple DBRest_minus_Skyline;
-                    for (auto it=DBRest[i].begin();it!=DBRest[i].end();it++){
-                        if (std::find(v.begin(),v.end(),(*it)[0])!=v.end()){
-                            DBRest_minus_Skyline.push_back((*it));
-                        }
-                    }
-                    DBRest[i].swap(DBRest_minus_Skyline);
-                    
+        for (int i=0;i<omega;i++){
+            bool found=false;
+            for (int j=0;j<DBSky[subspace-1].size() && DBSky[subspace-1][j][0]<=valid_data[i][0] ;j++){
+                if(valid_data[i][0]==DBSky[subspace-1][j][0]){
+                    found=true;
+                    break;
                 }
             }
+            if(!found){
+                valid_data_minus_dbsky.push_back(valid_data[i]);
+            }
+        }
 
-            // last step: clear buffer
-            buffer.clear();
-            cerr << "at timestamp "<< timestamp<< ", duration is: " <<duree(timeToPerformAll) << endl;
+        // 2 compare records in valid data minus DBSky to records in DBSky and DBRest
+        vector<Space> list_space;
+        listeAttributsPresents(subspace, d, list_space);
+        for (int i=0; i<valid_data_minus_dbsky.size();i++){
+          
+            bool inDBRest=true;
+            // first compare to DBSky
+            for (int j=0; j<DBSky[subspace-1].size();j++){
+                if(DBSky[subspace-1][j][0]>valid_data_minus_dbsky[i][0]){
+                    bool dominated=true;
+                    int equality=0;
+                    for (auto space=list_space.begin();space!=list_space.end();space++){
+                       
+                        if(valid_data_minus_dbsky[i][(*space)+1]<DBSky[subspace-1][j][(*space)+1]){
+                            dominated=false;
+                            break;
+                        }else if(valid_data_minus_dbsky[i][(*space)+1]==DBSky[subspace-1][j][(*space)+1]){
+                            equality++;
+                        }
+                    }
+            
+                if(dominated==true && equality<list_space.size()){
+                    // the record is dominated
+                    inDBRest=false;
+                    break;
+                    }
+                }
+            }
+            // second compare to DBRest if still inDBRest is true
+            if(inDBRest)
+            {
+                for (int j=0; j<DBRest[subspace-1].size();j++){
+                    if(DBRest[subspace-1][j][0]>valid_data_minus_dbsky[i][0]){
+                        bool dominated=true;
+                        int equality=0;
+                        for (auto space=list_space.begin();space!=list_space.end();space++){
+                           
+                            if(valid_data_minus_dbsky[i][(*space)+1]<DBRest[subspace-1][j][(*space)+1]){
+                                dominated=false;
+                                break;
+                            }else if(valid_data_minus_dbsky[i][(*space)+1]==DBRest[subspace-1][j][(*space)+1]){
+                                equality++;
+                            }
+                        }
+                  
+                    if(dominated==true && equality<list_space.size()){
+                        // the record is dominated
+                        inDBRest=false;
+                        break;
+                        }
+                    }
+                }
+            }
+            // if inDBrest true, we add the record to DBRest
+            if (inDBRest){
+
+                DBRest[subspace-1].push_back(valid_data_minus_dbsky[i]);
+            }
+        }
+
+        //cout << "DBRest of subspace: "<< subspace << ", size: "<<DBRest[subspace-1].size()<<endl;
+    }
+
+    int DBSky_size=0;
+    int DBRest_size=0;
+    for (Space subspace=1;subspace<All;subspace++){
+        DBSky_size+=DBSky[subspace-1].size();
+        DBRest_size+=DBRest[subspace-1].size();
+    }
+    cout << "DBSky size: "<<DBSky_size<<endl;
+    cout << "DBrest size: "<<DBRest_size<<endl;
+    cout << "Duration: " << duree(timeToPerformAll)<<endl;
+    // after warm up
+    cout << "--------After warm up--------"<<endl;
+
+    int timestamp=omega;
+    timeToPerformAll=debut();
+    
+    while (timestamp<omega+bufferMaxSize){
+
+        vector<TableTuple> data_for_dominance_test(All);
+        #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+        for (Space subspace=1;subspace<All;subspace++){
+
+            // LPM
+            // compare donnees[omega] to all records in DBSKY
+
+            //cout <<"++++++LPM++++++"<<endl;
+
+            //cout << "subspace: "<< subspace<< endl;
+            data_for_dominance_test[subspace]=DBSky[subspace-1];
+
+            data_for_dominance_test[subspace].push_back(donnees[timestamp]);
+
+            DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], data_for_dominance_test[subspace]);
+
+            bool found=false;
+            for (auto it_DBSky=DBSky[subspace-1].begin();it_DBSky!=DBSky[subspace-1].end();it_DBSky++){
+                if(donnees[timestamp][0]==(*it_DBSky)[0]){
+                    found=true; 
+                    break;
+                }
+            }
+            if (!found){
+                DBRest[subspace-1].push_back(donnees[timestamp]);
+                //cout << "record "<< timestamp<<" dominated, added to DBRest "<<endl; 
+            }
+            else{
+                //cout << "record "<< timestamp<<" added to DBSky "<<endl;
+            }
+        
+            // LMM
+            
+            //cout <<"++++++LMM++++++"<<endl;
+
+            if(valid_data[0][0]==DBRest[subspace-1][0][0]){
+                //cout << "record in DBRest: "<< DBRest[subspace-1][0][0] << " outdated"<<endl;
+                DBRest[subspace-1].erase(DBRest[subspace-1].begin());
+            }
+            else{
+                for (int i=0; i<DBSky[subspace-1].size();i++){
+                    if(valid_data[0][0]==DBSky[subspace-1][i][0]){
+                        //remove DBSky[subspace-1][i]
+                        //cout << "record in DBSky: "<< DBSky[subspace-1][i][0] << " outdated"<<endl;
+                        DBSky[subspace-1].erase(DBSky[subspace-1].begin()+i);
+                        data_for_dominance_test[subspace]=DBSky[subspace-1];
+                        auto it=data_for_dominance_test[subspace].begin();
+                        data_for_dominance_test[subspace].insert(it,DBRest[subspace-1].begin(),DBRest[subspace-1].end());
+                        DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], data_for_dominance_test[subspace]);
+                        break;
+                    }
+                }
+            }    
         }
         timestamp++;
     }
-    
-    int DBSkySize=0;
-    int DBRestSize=0;
-    for (int i=0;i<vectSpaceN.size();i++) DBSkySize+=DBSky[i].size(); 
-    for (int i=0;i<vectSpaceN.size();i++) DBRestSize+=DBRest[i].size();
-    cerr << "at timestamp: "<< timestamp <<", time to update" << endl;    
-    cerr << "DBSky size: "<<DBSkySize<<endl;
-    cerr << "DBRest size: "<<DBRestSize<<endl;
-    cerr << "DBSky + DBRest: "<<DBSkySize+DBRestSize<<endl;
+    DBSky_size=0;
+    DBRest_size=0;
+    for (Space subspace=1;subspace<All;subspace++){
+        DBSky_size+=DBSky[subspace-1].size();
+        DBRest_size+=DBRest[subspace-1].size();
+    }
+    cout << "DBSky size: "<<DBSky_size<<endl;
+    cout << "DBrest size: "<<DBRest_size<<endl;
+    cout << "Duration: " << duree(timeToPerformAll)<<endl;
 }
 
 
-void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize){
+void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize, int method){
         
     // generate subspaces for queries
     Space spAux;
-    Space N=1000; //number of random queries
+    Space N=10000; //number of random queries
     Space All=(1<<d)-1; //number of queries in the skycube
     vector<Space> subspaceN;
     vector<vector<Space>> listNTabSpace(N);
@@ -285,12 +431,17 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         listeAttributsPresents(i, d, listAllTabSpace[i-1]);
     }
 
-    // Run the framework
+    switch (method) {
 
-    //Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
-
-    // Experiment DBSKY
-
-    Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+        case 1: 
+            // Run the framework
+            Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceN, listNTabSpace);
+            break;
+        case 2: 
+            // Experiment DBSKY
+            Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+            break;
+    }
 }
+
 

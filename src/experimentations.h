@@ -12,6 +12,6 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
 
 void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN, vector<vector<Space>> &vectSpaceAll);
 
-void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize);
+void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize, int method);
 
 #endif
