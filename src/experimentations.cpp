@@ -152,7 +152,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             
             subspaceN_temp.clear();
             listNTabSpace_temp.clear();
@@ -163,7 +163,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             
             subspaceN_temp.clear();
             listNTabSpace_temp.clear();
@@ -174,7 +174,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             
             subspaceN_temp.clear();
             listNTabSpace_temp.clear();
@@ -185,11 +185,16 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             
             subspaceN_temp.clear();
             listNTabSpace_temp.clear();
 
+
+            //query answering by NSC
+            //NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
+            //query answering by BSKYTREE
+            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
             exit(0);
         }
         timestamp++;

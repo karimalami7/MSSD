@@ -525,7 +525,7 @@ void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d
         
         usDs.insert(toCompress[i].begin(),toCompress[i].end());
 
-        fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+        //fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
 
         l.push_back(usDs);
     }
@@ -564,7 +564,7 @@ void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Spac
         
                 usDs.insert(toCompress[i].begin(),toCompress[i].end());
 
-                fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
+                //fusionGloutonne(usDs, d);// meilleure position pour fusionGloutonne, mettre ici ou enlever completement
 
                 list_buckets.push_back(usDs);
             
