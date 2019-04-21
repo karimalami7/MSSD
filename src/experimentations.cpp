@@ -1,6 +1,6 @@
 #include "experimentations.h"
 
-int NB_THREADS=24;
+int NB_THREADS=4;
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
@@ -70,6 +70,8 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     }
     
     NEG::InitStructure (mainDataSet, mainTopmost, ltVcLtUsDs, d);
+
+
     
     // after warm up
 
@@ -133,68 +135,29 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             structureNSC.clear();
             int structSize=NEG::negativeSkycube(structureNSC, ltVcLtUsDs, d);
             
-            cerr << "Step 4 "<<structSize<<" in " << duree(timeToPerformStep)<< endl;
-            cerr << "Current timestamp" << timestamp<< endl; 
+            cerr << "Step 4 "<<structSize<<" in " << duree(timeToPerformStep)<< mendl(2);
+            cerr << "Current timestamp" << timestamp<< mendl(2); 
             
-            // fill valid_data with valid blocs of mainDataSet
-            TableTuple valid_data;
-
-            for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
-                for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
+            int compteur_batch=0;
+            for (auto it_list=ltVcLtUsDs.begin();it_list!=ltVcLtUsDs.end();it_list++){
+                cout << " batch number " << compteur_batch << endl; 
+                for (auto it_vector=it_list->begin(); it_vector!=it_list->end();it_vector++){
+                    cout << it_vector->size() << endl;
+                }
+                compteur_batch++;
             }
-
-            // vector<Space> subspaceN_temp;
-            // vector<vector<Space>> listNTabSpace_temp;
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+100);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+100);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+1000);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+1000);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10000);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10000);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
 
 
             //query answering by NSC
-            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
+            int valid_data_size=0;
+            for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
+                valid_data_size+=(*it1).size();
+            }
+            NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            TableTuple valid_data;
+            valid_data.insert(valid_data.begin(), donnees.begin()+4*bufferMaxSize+query_time, donnees.begin()+omega+4*bufferMaxSize+query_time);
+            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
             exit(0);
         }
         timestamp++;
@@ -409,7 +372,7 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         
     // generate subspaces for queries
     Space spAux;
-    Space N=10000; //number of random queries
+    Space N=100; //number of random queries
     Space All=(1<<d)-1; //number of queries in the skycube
     vector<Space> subspaceN;
     vector<vector<Space>> listNTabSpace(N);
