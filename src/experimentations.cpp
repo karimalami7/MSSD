@@ -70,16 +70,22 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     }
     
     NEG::InitStructure (mainDataSet, mainTopmost, ltVcLtUsDs, d);
-
-
     
+    mainTopmost.clear();
+
     // after warm up
+
+    int nb_max_batch_after_warmup=4;
+
+    int nb_batch_processed_after_warmup=0;
 
     while(timestamp < n){
 
         buffer.push_back(donnees[timestamp]);
 
         if (buffer.size()==bufferMaxSize){
+
+            nb_batch_processed_after_warmup++;
 
             timeToPerformAll=debut();
             timeToPerformStep=debut();
@@ -102,14 +108,14 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             if (mainDataSet.size()==omega/bufferMaxSize){
 
                 mainDataSet.pop_back();
-                mainTopmost.pop_back();
+                //mainTopmost.pop_back();
                 ltVcLtUsDs.pop_back();
                 NEG::expiration(ltVcLtUsDs);
             }
 
             mainDataSet.push_front(buffer);
-            mainTopmost.push_front(topmostBuffer);
-            NEG::updateNSCt_step1(buffer, mainTopmost, ltVcLtUsDs, d);
+            //mainTopmost.push_front(topmostBuffer);
+            NEG::updateNSCt_step1(buffer, mainDataSet, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
             
             cerr << "Step 2 in " << duree(timeToPerformStep)<< endl;
 
@@ -129,7 +135,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             cerr<<endl;
         }
 
-        if (timestamp==omega+4*bufferMaxSize+query_time){
+        if (nb_batch_processed_after_warmup==nb_max_batch_after_warmup){
             // 4 Set header
             timeToPerformStep=debut();
             structureNSC.clear();
@@ -137,16 +143,6 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             
             cerr << "Step 4 "<<structSize<<" in " << duree(timeToPerformStep)<< mendl(2);
             cerr << "Current timestamp" << timestamp<< mendl(2); 
-            
-            int compteur_batch=0;
-            for (auto it_list=ltVcLtUsDs.begin();it_list!=ltVcLtUsDs.end();it_list++){
-                cout << " batch number " << compteur_batch << endl; 
-                for (auto it_vector=it_list->begin(); it_vector!=it_list->end();it_vector++){
-                    cout << it_vector->size() << endl;
-                }
-                compteur_batch++;
-            }
-
 
             //query answering by NSC
             int valid_data_size=0;
@@ -156,7 +152,8 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
             TableTuple valid_data;
-            valid_data.insert(valid_data.begin(), donnees.begin()+4*bufferMaxSize+query_time, donnees.begin()+omega+4*bufferMaxSize+query_time);
+            valid_data.insert(valid_data.begin(), donnees.begin()+nb_max_batch_after_warmup*bufferMaxSize, donnees.begin()+omega+nb_max_batch_after_warmup*bufferMaxSize);
+
             experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
             exit(0);
         }

@@ -43,7 +43,7 @@ void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d
 
 void CompresserParInclusion(list<DualSpace> &l);
 
-void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
+void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
 
 void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
 

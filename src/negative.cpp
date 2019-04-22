@@ -269,8 +269,18 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 
 
-void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
+void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
     Space All=(1<<d)-1;
+
+    TableTuple valid_data;
+    for (auto it_list=mainDataset.begin(); it_list!=mainDataset.end(); it_list++){
+        valid_data.insert(valid_data.begin(), it_list->begin(), it_list->end());
+    }
+
+    TableTuple valid_topmost;
+    vector<Space> attList;
+    for (int j=1;j<=d;j++) attList.push_back(j);
+    ExecuteBSkyTree(attList, valid_data, valid_topmost);    
     
     //On calcule les paires des nouveaux tuples
     VectorListUSetDualSpace buffer_pairs(buffer.size());
@@ -278,28 +288,35 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
     #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
     for (int k=0; k<buffer.size(); k++){
      
-        vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
+        vector<list<DualSpace>> pairsToCompress(mainDataset.size());  // structure temporaire pour compresser les pairs en cascade
         //Pour chaque topmost de chaque bucket
-        int compteur=0;
-        for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
-             USetDualSpace usDs;
-            //Pour chaque tuple t' dans le topmost actuel, comparer t à t'
-             for (int j=0; j <(*it_topmost).size();j++){
-                 DualSpace ds;
-                 ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
-                if(ds.dom==All){
-                    usDs.clear();
-                    usDs.insert(ds);
-                    break;
-                }
-                usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
-                 
-             }   
-             pairsToCompress[compteur].insert(pairsToCompress[compteur].begin(), usDs.begin(),usDs.end());
 
-             compteur++;
-
+        for (int j=0; j<valid_topmost.size(); j++) {
+            DualSpace ds;
+            ds=NEG::domDualSubspace_1(valid_topmost[j], buffer[k], d);
+            pairsToCompress[pairsToCompress.size() - (valid_topmost[j][0] / buffer.size() - decalage) -1].push_back(ds);            
         }
+
+        // int compteur=0;
+        // for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
+        //      USetDualSpace usDs;
+        //     //Pour chaque tuple t' dans le topmost actuel, comparer t à t'
+        //      for (int j=0; j <(*it_topmost).size();j++){
+        //          DualSpace ds;
+        //          ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
+        //         if(ds.dom==All){
+        //             usDs.clear();
+        //             usDs.insert(ds);
+        //             break;
+        //         }
+        //         usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
+                 
+        //      }   
+        //      pairsToCompress[compteur].insert(pairsToCompress[compteur].begin(), usDs.begin(),usDs.end());
+
+        //      compteur++;
+
+        // }
        
         // clear all buckets older than a bucket which contains ALL
         bool find_all=false;
