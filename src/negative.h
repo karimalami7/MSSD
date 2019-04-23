@@ -43,9 +43,9 @@ void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d
 
 void CompresserParInclusion(list<DualSpace> &l);
 
-void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
+void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, TableTuple &valid_topmost, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
 
-void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
+void updateNSCt_step2(TableTuple &buffer, list<TableTuple> &mainDataset, TableTuple &valid_topmost, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d);
 
 void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d );
 

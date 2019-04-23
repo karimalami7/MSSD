@@ -269,22 +269,14 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 
 
-void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
-    Space All=(1<<d)-1;
-
-    TableTuple valid_data;
-    for (auto it_list=mainDataset.begin(); it_list!=mainDataset.end(); it_list++){
-        valid_data.insert(valid_data.begin(), it_list->begin(), it_list->end());
-    }
-
-    TableTuple valid_topmost;
-    vector<Space> attList;
-    for (int j=1;j<=d;j++) attList.push_back(j);
-    ExecuteBSkyTree(attList, valid_data, valid_topmost);    
+void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, TableTuple &valid_topmost, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
+    Space All=(1<<d)-1;   
     
     //On calcule les paires des nouveaux tuples
     VectorListUSetDualSpace buffer_pairs(buffer.size());
     //Pour chaque tuple t dans buffer, i.e., qu'on veut insérer
+    bool completely_dominated[buffer.size()];
+    for (int k=0;k<buffer.size();k++) completely_dominated[k]=false;
     #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
     for (int k=0; k<buffer.size(); k++){
      
@@ -294,58 +286,64 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, int dec
         for (int j=0; j<valid_topmost.size(); j++) {
             DualSpace ds;
             ds=NEG::domDualSubspace_1(valid_topmost[j], buffer[k], d);
+            if(ds.dom==All && (pairsToCompress.size() - (valid_topmost[j][0] / buffer.size() - decalage) -1)==0) {
+                completely_dominated[k]=true; 
+                break;
+            }
             pairsToCompress[pairsToCompress.size() - (valid_topmost[j][0] / buffer.size() - decalage) -1].push_back(ds);            
         }
-
-        // int compteur=0;
-        // for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
-        //      USetDualSpace usDs;
-        //     //Pour chaque tuple t' dans le topmost actuel, comparer t à t'
-        //      for (int j=0; j <(*it_topmost).size();j++){
-        //          DualSpace ds;
-        //          ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
-        //         if(ds.dom==All){
-        //             usDs.clear();
-        //             usDs.insert(ds);
-        //             break;
-        //         }
-        //         usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
-                 
-        //      }   
-        //      pairsToCompress[compteur].insert(pairsToCompress[compteur].begin(), usDs.begin(),usDs.end());
-
-        //      compteur++;
-
-        // }
        
         // clear all buckets older than a bucket which contains ALL
-        bool find_all=false;
-        int position_all=-1;
-        for (int i=0 ;i<pairsToCompress.size() && !find_all;i++){
-            for (auto iter=pairsToCompress[i].begin(); iter!=pairsToCompress[i].end();iter++){
-                if ((*iter).dom==All){
-                    find_all=true;
-                    position_all=i;
+        if(!completely_dominated[k]){
+            bool find_all=false;
+            int position_all=-1;
+            for (int i=0 ;i<pairsToCompress.size() && !find_all;i++){
+                for (auto iter=pairsToCompress[i].begin(); iter!=pairsToCompress[i].end();iter++){
+                    if ((*iter).dom==All){
+                        find_all=true;
+                        position_all=i;
+                    }
                 }
             }
-        }
-        if(position_all!=-1){
-            for (int j=pairsToCompress.size()-1;j>position_all;j--){
-                pairsToCompress[j].clear();
+            if(position_all!=-1){
+                for (int j=pairsToCompress.size()-1;j>position_all;j--){
+                    pairsToCompress[j].clear();
+                }
             }
-        }
-
-        //Une fois tous les buckets de paires de t obtenues, on les compresse.
-        CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);
-        
+    
+            //Une fois tous les buckets de paires de t obtenues, on les compresse.
+            CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);
+        }  
     }
+    
+    // remove from the dataset the records that are dominated during their whole lifetime
+    int nb_non_domines=0;//pour compter le nombre de non dominés
+    for (int i = 0; i<buffer.size();i++){if(!completely_dominated[i]) nb_non_domines++;}
+    VectorListUSetDualSpace buffer_pairs_to_swap(nb_non_domines);//On fixe la taille, ça permet d'éviter le push_back
+    TableTuple batch_data_to_swap(nb_non_domines);
+    auto it_bloc_data=mainDataset.begin();
+    int j=0;
+    for (int i = 0; i<buffer.size();i++){
+        if(!completely_dominated[i]){
+            buffer_pairs_to_swap[j]=buffer_pairs[i];
+            batch_data_to_swap[j]=(*it_bloc_data)[i];
+            j++;
+        }
+    }
+    buffer_pairs.swap(buffer_pairs_to_swap);
+    it_bloc_data->swap(batch_data_to_swap);
 
     ltVcLtUsDs.push_front(buffer_pairs); //bucket des paires des new tuples 
 
 }
 
-void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
+void updateNSCt_step2(TableTuple &buffer, list<TableTuple> &mainDataset, TableTuple &valid_topmost, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
     Space All=(1<<d)-1;
+
+    // TableTuple topmostBuffer;
+    // vector<Space> attList;
+    // for (int j=1;j<=d;j++) attList.push_back(j);
+    // ExecuteBSkyTree(attList, buffer, topmostBuffer);
    
     //On met à jour la liste de buckets de paires associée aux anciens tuples
     
@@ -356,38 +354,34 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
         it_bloc_data++;it_bloc_pair++; // the first one does not need to be updated
 
         // on boucle sur tous les blocs de tuples existants
-        int block_position=0;
         while (it_bloc_data!=mainDataset.end()){
+
             bool all_yes[it_bloc_data->size()];
             for (int k=0;k<it_bloc_data->size();k++) all_yes[k]=false;
-            #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
-            
+
             // on boucle sur tous les tuples d'un bloc 
+            #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
             for (int i=0; i<(*it_bloc_data).size(); i++){
-                
                 USetDualSpace usDS;
                 // on le compare au topmost des new_tuples
-                for (int j=0; j <topmostBuffer.size();j++){
-                    DualSpace ds;
-                    ds=NEG::domDualSubspace_1(topmostBuffer[j], (*it_bloc_data)[i], d);
-                    if (ds.dom==All){all_yes[i]=true;break;}
-                    usDS.insert(ds);
-    
+                for (int j=0; j <valid_topmost.size();j++){
+                    if(valid_topmost[j][0] >= (mainDataset.size()*buffer.size() + (decalage-1)*buffer.size() ) ){
+                        DualSpace ds;
+                        ds=NEG::domDualSubspace_1(valid_topmost[j], (*it_bloc_data)[i], d);
+                        if (ds.dom==All){all_yes[i]=true;break;}
+                        usDS.insert(ds);    
+                    }
+                    
                 }
                 
                 if(!all_yes[i]){ // compress only if the tuple is not totally dominated
-
                     // below Pour compression cascade
-                    
                     vector<list<DualSpace>> pairsToCompress((*it_bloc_pair)[i].size());
-
-                    pairsToCompress[0].insert(pairsToCompress[0].begin(),usDS.begin(), usDS.end());
+                    pairsToCompress[0].insert(pairsToCompress[0].begin(),usDS.begin(), usDS.end());    
                     
                     int indice=0;
                     for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
-
                         pairsToCompress[indice].insert(pairsToCompress[indice].begin(),it_list->begin(),it_list->end()); 
-
                         indice++;
                     }
                     
@@ -431,12 +425,8 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
 
             it_bloc_data++;
             it_bloc_pair++;
-            block_position++;
         }
-   
-    
     }   
-       
 }
 
 

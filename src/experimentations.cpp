@@ -94,40 +94,29 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
 
             cerr << "at timestamp: "<< timestamp <<", time to update" << endl;
 
-            // 1 compute topmost of the buffer
+            // 1 update main datasets and compute pairs of newly inserted tuples
             timeToPerformStep=debut();
-            TableTuple topmostBuffer;
+            mainDataSet.pop_back();
+            ltVcLtUsDs.pop_back();
+            NEG::expiration(ltVcLtUsDs);
+            mainDataSet.push_front(buffer);
+            TableTuple valid_data;
+            for (auto it_list=mainDataSet.begin(); it_list!=mainDataSet.end(); it_list++){
+                valid_data.insert(valid_data.begin(), it_list->begin(), it_list->end());
+            }
+            TableTuple valid_topmost;
             vector<Space> attList;
             for (int j=1;j<=d;j++) attList.push_back(j);
-            ExecuteBSkyTree(attList, buffer, topmostBuffer);
+            ExecuteBSkyTree(attList, valid_data, valid_topmost); 
+            NEG::updateNSCt_step1(buffer, mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
+            cerr << "Update Step 1 in " << duree(timeToPerformStep)<< endl;
 
-            cerr << "Step 1 in " << duree(timeToPerformStep)<< endl;
-
-            // 2 update main datasets and compute pairs of newly inserted tuples
+            // 2 update the set of existing pairs
             timeToPerformStep=debut();
-            if (mainDataSet.size()==omega/bufferMaxSize){
-
-                mainDataSet.pop_back();
-                //mainTopmost.pop_back();
-                ltVcLtUsDs.pop_back();
-                NEG::expiration(ltVcLtUsDs);
-            }
-
-            mainDataSet.push_front(buffer);
-            //mainTopmost.push_front(topmostBuffer);
-            NEG::updateNSCt_step1(buffer, mainDataSet, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
-            
-            cerr << "Step 2 in " << duree(timeToPerformStep)<< endl;
-
-            // 3 update the set of existing pairs
-            timeToPerformStep=debut();
-            
-            NEG::updateNSCt_step2(topmostBuffer, mainDataSet, ltVcLtUsDs, d);
-
-            cerr << "Step 3 in " << duree(timeToPerformStep)<< endl;
+            NEG::updateNSCt_step2(buffer, mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
+            cerr << "Update Step 2 in " << duree(timeToPerformStep)<< endl;
 
             // 5 clear buffer
-            
             buffer.clear();
 
             // update done
