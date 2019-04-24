@@ -144,7 +144,7 @@ long negativeSkycube(NegSkyStr &structure, ListVectorListUSetDualSpace &list_Vc_
     Space spXY, spY;    
      NegSkyStrAux structure0;   
     structSize = creationStructureNSC(structure0, list_Vc_lt_UsDs, d);  
-   
+   cerr<<"la taille de la structure avant "<<structSize<<endl;
     for (auto itXY=structure0.begin();itXY!=structure0.end();itXY++){   
         spXY=itXY->first;   
         vector<pair<Space,vector<DataType>>> vY;    
@@ -270,42 +270,33 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 
 void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
-    Space All=(1<<d)-1;
-    
     //On calcule les paires des nouveaux tuples
+    Space All=(1<<d)-1;
     VectorListUSetDualSpace buffer_pairs(buffer.size());
     //Pour chaque tuple t dans buffer, i.e., qu'on veut insérer
     #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
-    for (int k=0; k<buffer.size(); k++){
-     
+    for (int k=0; k<buffer.size(); k++){//pour chaque nouveau tuple   
         vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
-        //Pour chaque topmost de chaque bucket
+        //Pour chaque topmost de chaque transaction
         int compteur=0;
         for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end(); it_topmost++){
-             USetDualSpace usDs;
+             USetDualSpace usDs;//On utilise un USertDualSpace pour élimliner les doublons
             //Pour chaque tuple t' dans le topmost actuel, comparer t à t'
              for (int j=0; j <(*it_topmost).size();j++){
                  DualSpace ds;
                  ds=NEG::domDualSubspace_1((*it_topmost)[j], buffer[k], d);
-                if(ds.dom==All){
+                 if(ds.dom==All){
                     usDs.clear();
                     usDs.insert(ds);
                     break;
                 }
-                 usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant
-                
-                 
-             }   
+                 usDs.insert(ds);//on met la paire dans un ensemble spécifique au bucket courant  
+             }  
+             //Les paires obtenues sont mises dans une liste associée au tuple 
              pairsToCompress[compteur].insert(pairsToCompress[compteur].begin(), usDs.begin(),usDs.end());
 
-             compteur++;
-            //On affecte l'ensemble de paires à une liste
-            // list<DualSpace> maListe;
-            // for(auto it=usDs.begin(); it!=usDs.end(); ++it)maListe.push_back(*it);
-            // pairsToCompress.push_back(maListe);     
+             compteur++;   
         }
-       
-        //vector<list<DualSpace>> pairsToCompress_to_swap(mainTopmost.size());
         bool find_all=false;
         int position_all=-1;
         for (int i=0 ;i<pairsToCompress.size() && !find_all;i++){
@@ -322,12 +313,9 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainTopmost, ListVec
             }
         }
         //Une fois tous les buckets de paires de t obtenues, on les compresse.
-        CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);
-        
+        CompresserParInclusion_cascade(pairsToCompress,d,buffer_pairs[k]);   
     }
-
     ltVcLtUsDs.push_front(buffer_pairs); //bucket des paires des new tuples 
-
 }
 
 void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
@@ -347,10 +335,8 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
             bool all_yes[it_bloc_data->size()];
             for (int k=0;k<it_bloc_data->size();k++) all_yes[k]=false;
             #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
-    
             // on boucle sur tous les tuples d'un bloc 
-            for (int i=0; i<(*it_bloc_data).size(); i++){
-                
+            for (int i=0; i<(*it_bloc_data).size(); i++){  
                 USetDualSpace usDS;
                 // on le compare au topmost des new_tuples
                 for (int j=0; j <topmostBuffer.size();j++){
@@ -358,16 +344,15 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
                     ds=NEG::domDualSubspace_1(topmostBuffer[j], (*it_bloc_data)[i], d);
                     if (ds.dom==All){all_yes[i]=true;break;}
                     usDS.insert(ds);
-    
                 }
                 if(!all_yes[i]){ // compress only if the tuple is not totally dominated
-
                     // Pour compression cascade
                     //je compte le nombre de buckets associés au tuple i
-                    int nb_bucks=0;
+                    int nb_bucks=0;//(*it_bloc_pair)[i].size();//0;
                     for(auto it=(*it_bloc_pair)[i].begin() ; it!=(*it_bloc_pair)[i].end();it++) nb_bucks++;
-                    vector<list<DualSpace>> pairsToCompress(nb_bucks+1);
-
+                    //ça ne peut pas se faire avec nb_bucks=(*it_bloc_pair)[i].size() ?
+                    vector<list<DualSpace>> pairsToCompress(nb_bucks+1);//Reprendre la ligne ci-dessous
+                    //vector<list<DualSpace>> pairsToCompress(nb_bucks+1);
                     //list<DualSpace> maListe;
                     //On met dans maListe les paires obtenues après comparaison avec le topmost des nouveaux
                     pairsToCompress[0].insert(pairsToCompress[0].begin(),usDS.begin(), usDS.end());
@@ -448,11 +433,11 @@ void updateNSCt_step2(TableTuple &topmostBuffer, list<TableTuple> &mainDataset, 
 
 
 void expiration(ListVectorListUSetDualSpace &listVcUSetDualSpace){
+//que fait cette fonction ?
+    for (auto it_list = listVcUSetDualSpace.begin(); it_list != listVcUSetDualSpace.end(); it_list++){//pour chaque transaction/batch
+        for (auto it_vector = (*it_list).begin(); it_vector!=(*it_list).end(); it_vector++){//pour chaque tuple t dans le batch/transactin
 
-    for (auto it_list = listVcUSetDualSpace.begin(); it_list != listVcUSetDualSpace.end(); it_list++){
-        for (auto it_vector = (*it_list).begin(); it_vector!=(*it_list).end(); it_vector++){
-
-            (*it_vector).pop_back();
+            (*it_vector).pop_back();//supprimer le plus vieux bucket de paires associé à t
         }
     }
   
@@ -645,10 +630,7 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
                     usDs.insert(ds);
                 }   
 
-                list<DualSpace> maListe;
-                for(auto it=usDs.begin(); it!=usDs.end(); ++it)maListe.push_back(*it);
- 
-                pairsToCompress.push_back(maListe);     
+                pairsToCompress[mainTopmost.size() - position_topmost -1].insert(pairsToCompress[mainTopmost.size() - position_topmost -1].begin(),usDs.begin(), usDs.end());   
 
                 position_topmost--;
              

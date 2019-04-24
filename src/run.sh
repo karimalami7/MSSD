@@ -18,11 +18,11 @@
 #
 #	-m : method    NSCt=1   DBSky=2
 
-for type in INDE ANTI
+for type in INDE 
 
 do
 
-	for d in 12
+	for d in 10
 
 	do
 
@@ -39,16 +39,16 @@ do
 		# 	done	
 
 		# done
-
-		for o in  432000 864000
+		for o in 10000
+		#for o in  432000 864000
 
 		do
 
-			for b in 3000 
+			for b in 100
 
 			do
 
-			./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
+			./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 #2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
 
 			done	
 

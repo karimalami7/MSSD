@@ -39,7 +39,6 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
     cerr << "Space = " << d <<endl;
     cerr << "Distrib = " << dataName <<endl;
-
     int timestamp=0;
 
     double timeToPerformAll;
@@ -47,14 +46,14 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
 
     TableTuple buffer;
 
-    list<TableTuple> mainDataSet;
-    list<TableTuple> mainTopmost;
-    ListVectorListUSetDualSpace ltVcLtUsDs;
+    list<TableTuple> mainDataSet;//une liste de transaction
+    list<TableTuple> mainTopmost;//une liste de topmosts
+    ListVectorListUSetDualSpace ltVcLtUsDs; //??
     NegSkyStr structureNSC;
-    int query_time=7;
+    int query_time=7;//??
 
     // before warm up
-
+    double deb_warm_up=omp_get_wtime();
     while (timestamp<omega){
         buffer.push_back(donnees[timestamp]);
         if (buffer.size()==bufferMaxSize){
@@ -68,19 +67,21 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
         }
         timestamp++;
     }
-    
+    cerr<<"le warm_up a pris "<<omp_get_wtime()-deb_warm_up<<endl;
+    deb_warm_up=omp_get_wtime();
     NEG::InitStructure (mainDataSet, mainTopmost, ltVcLtUsDs, d);
+    cerr<<"L'initialisation de la structure a pris "<<omp_get_wtime()-deb_warm_up<<endl;
     
     // after warm up
 
     while(timestamp < n){
 
-        buffer.push_back(donnees[timestamp]);
+        buffer.push_back(donnees[timestamp]);//on met dans le buffer les tuples les uns après ls autres
 
-        if (buffer.size()==bufferMaxSize){
+        if (buffer.size()==bufferMaxSize){//si le buffer est plein, on déclenche une mise à jour ==> ondéclence le chronomètre
 
-            timeToPerformAll=debut();
-            timeToPerformStep=debut();
+            timeToPerformAll=debut();//oour mesurer le temps global
+            timeToPerformStep=debut();//pour mesurer chaque étape
 
             // Buffer at its maximum size, time to update and clear the buffer
 
@@ -91,32 +92,37 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             TableTuple topmostBuffer;
             vector<Space> attList;
             for (int j=1;j<=d;j++) attList.push_back(j);
-            ExecuteBSkyTree(attList, buffer, topmostBuffer);
+            ExecuteBSkyTree(attList, buffer, topmostBuffer);//on calcule le topmost du buffer
 
-            cerr << "Step 1 in " << duree(timeToPerformStep)<< endl;
+            cerr << "Step 0 in " << duree(timeToPerformStep)<< " to compute the topmost of the new tuples"<<endl;
 
             // 2 update main datasets and compute pairs of newly inserted tuples
             timeToPerformStep=debut();
-            if (mainDataSet.size()==omega/bufferMaxSize){
+            //remove outdated tuples and their respective information
+            //if (mainDataSet.size()==omega/bufferMaxSize){
 
-                mainDataSet.pop_back();
-                mainTopmost.pop_back();
-                ltVcLtUsDs.pop_back();
-                NEG::expiration(ltVcLtUsDs);
-            }
-
+            mainDataSet.pop_back();//remove the oldest transaction
+            mainTopmost.pop_back();//remove the topmost of the oldest transaction
+            ltVcLtUsDs.pop_back(); //remove the sequence of pairs buckets associated to outdated tuples
+               // double deb=debut();
+            NEG::expiration(ltVcLtUsDs);//it removes the buckets that are associated to the removed transaction
+               // cerr << "L'expiration a pris " << duree(deb)<< endl;
+            //}
+            cerr<<"l'expiration a pris "<<duree(timeToPerformStep)<< endl;
+            timeToPerformStep=debut();
+            //Add th new tuples
             mainDataSet.push_front(buffer);
             mainTopmost.push_front(topmostBuffer);
             NEG::updateNSCt_step1(buffer, mainTopmost, ltVcLtUsDs, d);
             
-            cerr << "Step 2 in " << duree(timeToPerformStep)<< endl;
+            cerr << " updateNSCt_step1 in " << duree(timeToPerformStep)<< endl;
 
             // 3 update the set of existing pairs
             timeToPerformStep=debut();
             
             NEG::updateNSCt_step2(topmostBuffer, mainDataSet, ltVcLtUsDs, d);
 
-            cerr << "Step 3 in " << duree(timeToPerformStep)<< endl;
+            cerr << "updateNSCt_step2 in " << duree(timeToPerformStep)<< endl;
 
             // 5 clear buffer
             
@@ -137,11 +143,14 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             cerr << "Current timestamp" << timestamp<< endl; 
             
             // fill valid_data with valid blocs of mainDataSet
+            double deb_remp=omp_get_wtime();
             TableTuple valid_data;
 
             for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
                 for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
             }
+            cerr<<"le remplissage de la table des tuples valides a pris"<<omp_get_wtime()-deb_remp<<endl;
+            cerr<<"valid data contient"<<valid_data.size()<<" tuples"<<endl;
 
             // vector<Space> subspaceN_temp;
             // vector<vector<Space>> listNTabSpace_temp;
@@ -194,7 +203,25 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //query answering by NSC
             NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
             //query answering by BSKYTREE
-            //experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
+            //valid_data.clear();
+            //valid_data.insert(valid_data.begin(), donnees.begin()+40000,donnees.begin()+140000);
+            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
+            size_t nbnb=0, nbmin=100000000, nbmax=0;
+            cerr<<"On a "<<ltVcLtUsDs.size()<<" transactions"<<endl;
+            nbnb=0;
+            int ccccc=0;
+            for (auto it_list = ltVcLtUsDs.begin(); it_list != ltVcLtUsDs.end(); it_list++){//pour chaque transaction/batch
+                for (auto it_vector = (*it_list).begin(); it_vector!=(*it_list).end(); it_vector++){//pour chaque tuple t dans le batch/transactin
+                    if((*it_vector).size()<nbmin)nbmin=(*it_vector).size();
+                    if((*it_vector).size()>nbmax)nbmax=(*it_vector).size();
+                    nbnb+=(*it_vector).size();
+                    if((*it_vector).size()>1000) ccccc++;
+                    //(*it_vector).pop_back();//supprimer le plus vieux bucket de paires associé à t
+                }
+            }
+            cerr<<"On a un total de "<<nbnb<<" buckets"<<endl;
+            cerr<<"le nombre max de buckets par tuple est" <<nbmax<<" le min est "<<nbmin<<endl;
+            cerr<<"le nombre de tuples avec plus de 1000 buckets est "<<ccccc<<endl;
             exit(0);
         }
         timestamp++;
@@ -409,7 +436,7 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         
     // generate subspaces for queries
     Space spAux;
-    Space N=10000; //number of random queries
+    Space N=1000; //number of random queries
     Space All=(1<<d)-1; //number of queries in the skycube
     vector<Space> subspaceN;
     vector<vector<Space>> listNTabSpace(N);
