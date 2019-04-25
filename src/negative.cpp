@@ -526,28 +526,23 @@ void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Spac
 
     list_buckets.clear();
 
-    for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector, index 0
+    CompresserParInclusion(toCompress[0]);
+
+    USetDualSpace usDs;
+
+    usDs.insert(toCompress[0].begin(),toCompress[0].end());
+
+    fusionGloutonne(usDs, d);// fousion gloutonne que pour le plus récent
+
+    list_buckets.push_back(usDs);    
+
+    for (int i=1;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector, index 0
 
         USetDualSpace usDs;
 
-        CompresserParInclusion(toCompress[i]);
-
-        list<DualSpace> lds;
-
-        for (int j=0; j<i;j++){  // we gather more recent buck, i.e. j smaller than i  
-            for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
-                lds.push_front(*it);
-            }
-            
-        }
-
-        compresserParInclusion2liste(toCompress[i],lds);
+        compresserParInclusion2liste(toCompress[i],toCompress[0]);
         
         usDs.insert(toCompress[i].begin(),toCompress[i].end());
-
-        if (i==0){
-            fusionGloutonne(usDs, d);// fousion gloutonne que pour le plus récent 
-        }
 
         list_buckets.push_back(usDs);
     }
