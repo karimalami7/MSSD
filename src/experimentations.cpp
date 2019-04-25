@@ -1,6 +1,6 @@
 #include "experimentations.h"
 
-int NB_THREADS=4;
+int NB_THREADS=24; 
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;

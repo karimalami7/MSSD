@@ -4,7 +4,7 @@ using namespace std;
 
 namespace NEG{
 
-int NB_THREADS=4;
+int NB_THREADS=24;
 
 void triScore(TableTuple &donnees, Space d){
 //  Cette procédure trie les données suivant le score (somme des valeurs des attributs)
@@ -447,6 +447,7 @@ void expiration(ListVectorListUSetDualSpace &listVcUSetDualSpace){
 
 void CompresserParInclusion(list<DualSpace> &l){
     l.sort(NEG::pet_pair);
+    //Attention, je crois qu'ici les rôles de it et it1 sont inversés
     for(auto it=l.begin(); it!=l.end();it++){
         auto it1=it;
         it1++;
@@ -530,7 +531,7 @@ void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Spac
 
         USetDualSpace usDs;
 
-        CompresserParInclusion(toCompress[i]);
+        CompresserParInclusion(toCompress[i]);//we don't need to do this at each insertion
 
         list<DualSpace> lds;
 
