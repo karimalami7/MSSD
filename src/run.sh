@@ -22,7 +22,7 @@ for type in INDE
 
 do
 
-	for d in 12
+	for d in 8
 
 	do
 
@@ -44,7 +44,7 @@ do
 
 		do
 
-			for b in 10000
+			for b in 1000
 
 			do
 

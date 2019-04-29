@@ -49,7 +49,7 @@ void updateNSCt_step2(TableTuple &buffer, list<TableTuple> &mainDataset, TableTu
 
 void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d );
 
-void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Space d, ListUSetDualSpace &list_buckets);
+void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Space d, int buck_position, ListUSetDualSpace &list_buckets);
 }
 
 
