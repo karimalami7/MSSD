@@ -38,6 +38,9 @@ void visualisation_pairs(vector<USetDualSpace> listUSetDualSpace){
 }
 
 bool pet_pair(const DualSpace &sp1, const DualSpace &sp2 ){
+    //retourne TRUE si la paire sp1 contient plus de dimensions que sp2
+    //ça sert à trier les listes/vecteurs de paires par ordre décroissant de ce nombre
+    //pour ensuite faciliter les tests d'inclusion 
     auto n1=sp1.dom + sp1.equ;
     auto n2=sp2.dom + sp2.equ;
     return __builtin_popcount(n1) >__builtin_popcount(n2);
@@ -59,7 +62,7 @@ inline DualSpace domDualSubspace_1(const Point &t1, const Point &t2, const Space
         if(t1[j] < t2[j]) {sortie.dom+=pow;++poids1;}
         else if(t1[j] == t2[j]) {sortie.equ+=pow;++poids2;}
         pow*=2;
-	   //pow = (pow << 1);
+       //pow = (pow << 1);
     }
     sortie.poids=(1<<(poids1+poids2))-(1<<poids2);
     return sortie;
@@ -385,7 +388,7 @@ void updateNSCt_step2(TableTuple &buffer, list<TableTuple> &mainDataset, TableTu
                         indice++;
                     }
                     
-                    CompresserParInclusion_cascade_v2(pairsToCompress, d, (*it_bloc_pair)[i]);
+                    //CompresserParInclusion_cascade_v2(pairsToCompress, d, (*it_bloc_pair)[i]);
                     
                     // below pour Compression locale seulement
             
@@ -447,7 +450,6 @@ void expiration(ListVectorListUSetDualSpace &listVcUSetDualSpace){
 
 void CompresserParInclusion(list<DualSpace> &l){
     l.sort(NEG::pet_pair);
-    //Attention, je crois qu'ici les rôles de it et it1 sont inversés
     for(auto it=l.begin(); it!=l.end();it++){
         auto it1=it;
         it1++;
@@ -470,7 +472,7 @@ s.sort(NEG::pet_pair);
     auto it=l.begin();
     while(it!=l.end()){
         auto it1=s.begin();
-        while(it1!=s.end()){
+        while(it1!=s.end() ){
             if (estInclusDans((*it).dom,(*it1).dom) && (estInclusDans((*it).equ, (*it1).dom + (*it1).equ))){
                 it=l.erase(it);
                 break;
@@ -527,28 +529,23 @@ void CompresserParInclusion_cascade_v2(vector<list<DualSpace>> &toCompress, Spac
 
     list_buckets.clear();
 
-    for (int i=0;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector, index 0
+    CompresserParInclusion(toCompress[0]);
+
+    USetDualSpace usDs;
+
+    usDs.insert(toCompress[0].begin(),toCompress[0].end());
+
+    fusionGloutonne(usDs, d);// fousion gloutonne que pour le plus récent
+
+    list_buckets.push_back(usDs);    
+
+    for (int i=1;i<toCompress.size();i++){ // the more recent buck  is in the front of the vector, index 0
 
         USetDualSpace usDs;
 
-        CompresserParInclusion(toCompress[i]);//we don't need to do this at each insertion
-
-        list<DualSpace> lds;
-
-        for (int j=0; j<i;j++){  // we gather more recent buck, i.e. j smaller than i  
-            for (auto it=toCompress[j].begin(); it!=toCompress[j].end();it++){
-                lds.push_front(*it);
-            }
-            
-        }
-
-        compresserParInclusion2liste(toCompress[i],lds);
+        compresserParInclusion2liste(toCompress[i],toCompress[0]);
         
         usDs.insert(toCompress[i].begin(),toCompress[i].end());
-
-        if (i==0){
-            fusionGloutonne(usDs, d);// fousion gloutonne que pour le plus récent 
-        }
 
         list_buckets.push_back(usDs);
     }
@@ -563,8 +560,8 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
         VectorListUSetDualSpace bloc_pairs(it_listDataset->size());
         bool all_yes[it_listDataset->size()];
         for (int k=0;k<it_listDataset->size();k++) all_yes[k]=false;
-        #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
 
+        #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
         for (int i = 0; i<it_listDataset->size();i++){
             
             vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
@@ -615,4 +612,3 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
 }
 
 }
-
