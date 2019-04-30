@@ -274,7 +274,8 @@ void skylinequery(string dataName, NegSkyStr &structure0,  int indexedDataSize, 
 
 void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, TableTuple &valid_topmost, int decalage, ListVectorListUSetDualSpace &ltVcLtUsDs, Space d){
     Space All=(1<<d)-1;   
-    
+    int number_batch=mainDataset.size();
+    int size_buffer=buffer.size();
     //On calcule les paires des nouveaux tuples
     VectorListUSetDualSpace buffer_pairs(buffer.size());
     //Pour chaque tuple t dans buffer, i.e., qu'on veut insérer
@@ -283,21 +284,28 @@ void updateNSCt_step1(TableTuple &buffer, list<TableTuple> &mainDataset, TableTu
     #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic) 
     for (int k=0; k<buffer.size(); k++){
      
-        vector<list<DualSpace>> pairsToCompress(mainDataset.size());  // structure temporaire pour compresser les pairs en cascade
+        vector<list<DualSpace>> pairsToCompress(number_batch);  // structure temporaire pour compresser les pairs en cascade
+        vector<unordered_set<DualSpace>> pairsToCompress_in_set(number_batch);// pairToCompress en set pour éviter les doublons
         //Pour chaque topmost de chaque bucket
 
         for (int j=0; j<valid_topmost.size(); j++) {
             DualSpace ds;
             ds=NEG::domDualSubspace_1(valid_topmost[j], buffer[k], d);
-            if(ds.dom==All && (pairsToCompress.size() - (valid_topmost[j][0] / buffer.size() - decalage) -1)==0) {
+            if(ds.dom==All && (number_batch - (valid_topmost[j][0] / size_buffer - decalage) -1)==0) {
                 completely_dominated[k]=true; 
                 break;
             }
-            pairsToCompress[pairsToCompress.size() - (valid_topmost[j][0] / buffer.size() - decalage) -1].push_back(ds);            
+            pairsToCompress_in_set[number_batch - (valid_topmost[j][0] / size_buffer - decalage) -1].insert(ds);            
         }
        
-        // clear all buckets older than a bucket which contains ALL
+        // si le tuple n'est pas complètement dominé, on le compresse
         if(!completely_dominated[k]){
+            
+            for (int i=0;i<number_batch;i++){
+                pairsToCompress[i].insert(pairsToCompress[i].begin(), pairsToCompress_in_set[i].begin(), pairsToCompress_in_set[i].end());
+            }
+
+            // clear all buckets older than a bucket which contains ALL
             bool find_all=false;
             int position_all=-1;
             for (int i=0 ;i<pairsToCompress.size() && !find_all;i++){
@@ -458,8 +466,7 @@ s.sort(NEG::pet_pair);
     auto it=l.begin();
     while(it!=l.end()){
         auto it1=s.begin();
-
-        while(it1!=s.end()){// && (spacePair(*it)<= spacePair(*it1))){
+        while(it1!=s.end()){ //&& !NEG::pet_pair((*it1),(*it))){
             if (estInclusDans((*it).dom,(*it1).dom) && (estInclusDans((*it).equ, (*it1).dom + (*it1).equ))){
                 it=l.erase(it);
                 break;
@@ -469,12 +476,7 @@ s.sort(NEG::pet_pair);
         if(it1==s.end()){
             it++;
         }
-
-      
     }
-
-
-
 }
 
 void CompresserParInclusion_cascade(vector<list<DualSpace>> &toCompress, Space d, ListUSetDualSpace &l){
@@ -598,21 +600,23 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
 
     int block_position=0;
     Space All=(1<<d)-1;
+    int number_batch=mainDataset.size(); 
+
     //pour chaque transaction de la plus ancienne à la plus récente
-    for (auto it_listDataset=mainDataset.rbegin();it_listDataset!=mainDataset.rend();it_listDataset++){
-       
+    for (auto it_listDataset=mainDataset.rbegin();it_listDataset!=mainDataset.rend();it_listDataset++){   
         VectorListUSetDualSpace bloc_pairs(it_listDataset->size());
         bool all_yes[it_listDataset->size()];
+        
         //pour chaque enregistrement dans la transaction courante
         for (int k=0;k<it_listDataset->size();k++) all_yes[k]=false;
+        
         //pour chaque enregistrement dans la transaction courante   
         #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
-
         for (int i = 0; i<it_listDataset->size();i++){
-            
-            vector<list<DualSpace>> pairsToCompress(mainTopmost.size());  // structure temporaire pour compresser les pairs en cascade
-            int position_topmost=mainTopmost.size()-1;
-            //pour chaque "case" du main topmost de la plus récente à la plus ancienne
+
+            vector<list<DualSpace>> pairsToCompress(number_batch);  // structure temporaire pour compresser les pairs en cascade
+            int position_topmost=number_batch-1;
+            //pour chaque "topmost" d'une transaction, de la plus récente à la plus ancienne
             for (auto it_topmost = mainTopmost.begin(); it_topmost!=mainTopmost.end() && !all_yes[i]; it_topmost++){
 
                 USetDualSpace usDs;
@@ -624,11 +628,11 @@ void InitStructure (list<TableTuple> &mainDataset, list<TableTuple> &mainTopmost
                     if(block_position <= position_topmost && ds.dom==All){all_yes[i]=true;break;}
                     usDs.insert(ds);
                 }   
-                //
-                pairsToCompress[mainTopmost.size() - position_topmost -1].insert(pairsToCompress[mainTopmost.size() - position_topmost -1].begin(),usDs.begin(), usDs.end());   
+                
+                // l'indice 0 correspond à la trnsaction la plus récente
+                pairsToCompress[number_batch-position_topmost -1].insert(pairsToCompress[number_batch - position_topmost -1].begin(),usDs.begin(), usDs.end());   
 
                 position_topmost--;
-             
             }
            
             if(!all_yes[i])CompresserParInclusion_cascade(pairsToCompress,d,bloc_pairs[i]);
