@@ -466,14 +466,15 @@ s.sort(NEG::pet_pair);
     auto it=l.begin();
     while(it!=l.end()){
         auto it1=s.begin();
-        while(it1!=s.end()){ //&& !NEG::pet_pair((*it1),(*it))){
+        bool comp=(spacePair(*it)<=spacePair(*it1));
+        while(it1!=s.end() && comp){
             if (estInclusDans((*it).dom,(*it1).dom) && (estInclusDans((*it).equ, (*it1).dom + (*it1).equ))){
                 it=l.erase(it);
                 break;
             }
             it1++;
         }
-        if(it1==s.end()){
+        if(it1==s.end() || !comp){
             it++;
         }
     }
