@@ -185,7 +185,10 @@ inline Space spaceSize(const Space subspace){
     return __builtin_popcount(subspace);
 }
 
-
+inline Space spacePair(const DualSpace p){
+ //retourne la taille d'un sous-espace (nombre d'attributs 
+    return (__builtin_popcount(p.dom)+__builtin_popcount(p.equ));
+}
 
 class mendl
 {
