@@ -26,20 +26,6 @@ do
 
 	do
 
-		# for o in  43200 86400
-
-		# do
-
-		# 	for b in 300   
-
-		# 	do
-
-		# 	./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
-
-		# 	done	
-
-		# done
-
 		for o in  100000
 
 		do
