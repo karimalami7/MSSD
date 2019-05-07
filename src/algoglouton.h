@@ -29,7 +29,7 @@ void vect_of_vect_to_vect_of_int (vector<vector<int> > &v1, vector<int> &v2);
 
 void deleteEmptyEntries(vector<Space> &poidsDualSpace, vector<DataType> &indiceValide);
 
-void fusionGloutonne(USetDualSpace &uSetDualSpace, Space d);
+void fusionGloutonne(list<DualSpace> &uSetDualSpace, Space d);
 
 
 

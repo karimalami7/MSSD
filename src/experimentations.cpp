@@ -136,15 +136,14 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //*************************************************************************
             // 3 update set of pairs of existing records
             timeToPerformStep=debut();
-            NEG::updateNSCt_step2(mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
+            NEG::updateNSCt_step2(mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, bufferMaxSize);
             cerr << "Update Step 2 in " << duree(timeToPerformStep)<< endl;
             //*************************************************************************
             
-            // 5 clear buffer
+            // 5 clear buffer and memorize topmost ids 
             buffer.clear();
             cerr << "Update done in " << duree(timeToPerformAll)<< mendl(1);
             cerr<<endl;
-        
 
         
             //*************************************************************************
