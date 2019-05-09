@@ -50,7 +50,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     list<TableTuple> mainTopmost;
     ListVectorListUSetDualSpace ltVcLtUsDs;
     NegSkyStr structureNSC;
-    int nb_max_batch_after_warmup=4;
+    int nb_max_batch_after_warmup=10;
     int nb_batch_processed_after_warmup=0;
     TableTuple valid_data;
 
@@ -62,7 +62,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
         buffer.clear();
     } 
     timestamp=omega-1;
-    TableTuple topmost;
+    TableTuple topmost, old_topmost;
     vector<Space> attList;
     for (int j=1;j<=d;j++) attList.push_back(j);
     valid_data.insert(valid_data.begin(), donnees.begin(), donnees.begin()+omega);
@@ -86,9 +86,9 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     }
     NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN);
     //query answering by BSKYTREE
-    valid_data.clear();
-    valid_data.insert(valid_data.begin(), donnees.begin()+nb_batch_processed_after_warmup*bufferMaxSize, donnees.begin()+omega+nb_batch_processed_after_warmup*bufferMaxSize);
-    experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+    // valid_data.clear();
+    // valid_data.insert(valid_data.begin(), donnees.begin()+nb_batch_processed_after_warmup*bufferMaxSize, donnees.begin()+omega+nb_batch_processed_after_warmup*bufferMaxSize);
+    // experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
     //*************************************************************************
 
     //*************************************************************************
@@ -136,7 +136,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             //*************************************************************************
             // 3 update set of pairs of existing records
             timeToPerformStep=debut();
-            NEG::updateNSCt_step2(mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, bufferMaxSize);
+            NEG::updateNSCt_step2(mainDataSet, valid_topmost, old_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, bufferMaxSize);
             cerr << "Update Step 2 in " << duree(timeToPerformStep)<< endl;
             //*************************************************************************
             
@@ -144,7 +144,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             buffer.clear();
             cerr << "Update done in " << duree(timeToPerformAll)<< mendl(1);
             cerr<<endl;
-
+            valid_topmost.swap(old_topmost);
         
             //*************************************************************************
             //query answering
@@ -162,9 +162,9 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             }
             NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN);
             //query answering by BSKYTREE
-            valid_data.clear();
-            valid_data.insert(valid_data.begin(), donnees.begin()+(nb_batch_processed_after_warmup*bufferMaxSize), donnees.begin()+omega+(nb_batch_processed_after_warmup*bufferMaxSize));
-            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+            // valid_data.clear();
+            // valid_data.insert(valid_data.begin(), donnees.begin()+(nb_batch_processed_after_warmup*bufferMaxSize), donnees.begin()+omega+(nb_batch_processed_after_warmup*bufferMaxSize));
+            // experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
             //*************************************************************************
         }
 
