@@ -140,11 +140,11 @@ void deleteEmptyEntries(vector<Space> &poidsDualSpace, vector<DataType> &indiceV
     indiceValide.swap(result);
 }
 
-void fusionGloutonne(USetDualSpace &uSetDualSpace, Space d){
+void fusionGloutonne(list<DualSpace> &uSetDualSpace, Space d){
 	//fonction qui retourne un sous-ensemble minimal de USetDualSpace et qui lui est équivalent
 	//le principe de la fonction est un algorithme glouton
     DataType i;
-    USetDualSpace result;
+    list<DualSpace> result;
     Space all=1<<d;
 
     map<DualSpace, vector<Space>> M;
@@ -181,7 +181,7 @@ void fusionGloutonne(USetDualSpace &uSetDualSpace, Space d){
 	   //on met les espaces couverts par la paire choisie dans un vecteur intermédiaire
         newDs = itX->first;
 	   //on ajoute cette paire au résultat
-        result.insert(newDs);
+        result.push_back(newDs);
 	   //on efface cette paire
         M.erase(itX);
         

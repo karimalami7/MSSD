@@ -12,43 +12,27 @@
 #
 #	-d : space or number of attributes
 #
-#	-t : NBTHREARDS = number of parallel threads to be run.
-#
 # 	-b : batch interval
 #
-#	-m : method    NSCt=1   DBSky=2
+#	-m : method    MSSD=1   DBSky=2
 
 for type in INDE 
 
 do
 
-	for d in 10
+	for d in 8
 
 	do
 
-		# for o in  43200 86400
-
-		# do
-
-		# 	for b in 300   
-
-		# 	do
-
-		# 	./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
-
-		# 	done	
-
-		# done
-		for o in 10000
-		#for o in  432000 864000
+		for o in  100000
 
 		do
 
-			for b in 100
+			for b in 1000
 
 			do
 
-			./main -f $type -k 100 -o $o -c 2 -d $d -t 24 -b $b -m 1 #2> "../experiments/m-1-type-$type-dim-$d-o-$o-b-$b-qa"
+			./main -f $type -k 100 -o $o -c 2 -d $d -b $b -m 1 
 
 			done	
 

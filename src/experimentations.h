@@ -10,7 +10,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
 
 void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple &donnees, Space d, int k, string path, vector<Space> &subspaceN, vector<vector<Space>> &vectSpaceN);
 
-void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN, vector<vector<Space>> &vectSpaceAll);
+void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN);
 
 void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize, int method);
 

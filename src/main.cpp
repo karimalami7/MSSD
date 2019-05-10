@@ -21,7 +21,6 @@ int main(int argc,char **argv){
     DataType k;
     DataType n;
     Space d;
-    int NB_THREADS;
     int cycles;
     int omega;
     int bufferSize;
@@ -30,7 +29,7 @@ int main(int argc,char **argv){
     int c = 0;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "f:k:o:c:d:t:b:m:")) != -1) {
+    while ((c = getopt(argc, argv, "f:k:o:c:d:b:m:")) != -1) {
         switch(c){
 
         case 'f':  
@@ -51,9 +50,6 @@ int main(int argc,char **argv){
             break;
         case 'd':
             d=atoi(optarg);
-            break;
-        case 't':
-            NB_THREADS=atoi(optarg);
             break;
         case 'b':
             bufferSize=atoi(optarg);

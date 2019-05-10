@@ -1,6 +1,6 @@
 #include "experimentations.h"
 
-int NB_THREADS=24;
+int NB_THREADS=24; 
 
 void displayResult(string dataName, DataType n, Space d, DataType k, string step, long structSize, double timeToPerform, string method){
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
@@ -8,22 +8,19 @@ void displayResult(string dataName, DataType n, Space d, DataType k, string step
 
 
 
-void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN, vector<vector<Space>> &vectSpaceAll){
+void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN){
     double timeToPerform;
     long structSize=0;
     DataType i;
     DataType N=vectSpaceN.size();
-    DataType All=vectSpaceAll.size();
     stringstream ss;ss<<"N="<<N;
 
     structSize=0;
     timeToPerform=debut();
     for (i=0;i<N;i++){
-        //cout <<"\r"<<i<<endl;
         std::vector<Point> Skyline;
         Skyline=subspaceSkylineSize_TREE(vectSpaceN[i], donnees);
-        structSize+=Skyline.size();
-        //for (int l=0;l<Skyline.size();l++) cerr << " "<<Skyline[l][0] << " ;"<<endl;     
+        structSize+=Skyline.size();     
     }
     timeToPerform=duree(timeToPerform);
     displayResult(dataName, donnees.size(), d, k, ss.str(), structSize, timeToPerform, "TREE");
@@ -38,7 +35,8 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     cerr << "omega = " << omega <<endl; 
     cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
     cerr << "Space = " << d <<endl;
-    cerr << "Distrib = " << dataName <<endl;
+    cerr << "Distrib = " << dataName <<mendl(2);
+
     int timestamp=0;
 
     double timeToPerformAll;
@@ -50,180 +48,128 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     list<TableTuple> mainTopmost;//une liste de topmosts
     ListVectorListUSetDualSpace ltVcLtUsDs; //??
     NegSkyStr structureNSC;
-    int query_time=7;//??
 
+    int nb_max_batch_after_warmup=5;
+    int nb_batch_processed_after_warmup=0;
+    TableTuple valid_data;
+
+    //************************************************************************
     // before warm up
-    double deb_warm_up=omp_get_wtime();
-    while (timestamp<omega){
-        buffer.push_back(donnees[timestamp]);
-        if (buffer.size()==bufferMaxSize){
-            TableTuple topmostBuffer;
-            vector<Space> attList;
-            for (int j=1;j<=d;j++) attList.push_back(j);
-            ExecuteBSkyTree(attList, buffer, topmostBuffer);
-            mainDataSet.push_front(buffer);
-            mainTopmost.push_front(topmostBuffer); 
-            buffer.clear();
-        }
-        timestamp++;
+    timeToPerformStep=debut();
+    for (int i=0; i<omega/bufferMaxSize; i++){
+        buffer.insert(buffer.begin(),donnees.begin()+(i*bufferMaxSize),donnees.begin()+((i+1)*bufferMaxSize));
+        mainDataSet.push_front(buffer);
+        buffer.clear();
+    } 
+    timestamp=omega-1;
+    TableTuple valid_topmost, old_topmost;
+    vector<Space> attList;
+    for (int j=1;j<=d;j++) attList.push_back(j);
+    valid_data.insert(valid_data.begin(), donnees.begin(), donnees.begin()+omega);
+    ExecuteBSkyTree(attList, valid_data, valid_topmost);
+    NEG::InitStructure (mainDataSet, valid_topmost, ltVcLtUsDs, d, bufferMaxSize);
+    cerr << "Structure initialized in " << duree(timeToPerformStep)<< " ms"<< endl;
+    //*************************************************************************
+
+    //*************************************************************************
+    //query answering
+    timeToPerformStep=debut();
+    structureNSC.clear();
+    int structSize=NEG::negativeSkycube(structureNSC, ltVcLtUsDs, d);
+      
+    cerr << structSize<<" pairs indexed in " << duree(timeToPerformStep)<< " ms"<< mendl(2);
+
+    //query answering by NSC
+    int valid_data_size=0;
+    for(auto it1=mainDataSet.begin(); it1!= mainDataSet.end(); it1++ ){
+        valid_data_size+=(*it1).size();
     }
-    cerr<<"le warm_up a pris "<<omp_get_wtime()-deb_warm_up<<endl;
-    deb_warm_up=omp_get_wtime();
-    NEG::InitStructure (mainDataSet, mainTopmost, ltVcLtUsDs, d);
-    cerr<<"L'initialisation de la structure a pris "<<omp_get_wtime()-deb_warm_up<<endl;
-    
+    NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN);
+    //query answering by BSKYTREE
+    valid_data.clear();
+    valid_data.insert(valid_data.begin(), donnees.begin()+nb_batch_processed_after_warmup*bufferMaxSize, donnees.begin()+omega+nb_batch_processed_after_warmup*bufferMaxSize);
+    experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+    cerr<<endl;
+    //*************************************************************************
+
+    //*************************************************************************
     // after warm up
 
-    while(timestamp < n){
+    timestamp++;
+
+    while(timestamp < n && nb_batch_processed_after_warmup<nb_max_batch_after_warmup){
 
         buffer.push_back(donnees[timestamp]);//on met dans le buffer les tuples les uns après ls autres
 
         if (buffer.size()==bufferMaxSize){//si le buffer est plein, on déclenche une mise à jour ==> ondéclence le chronomètre
 
-            timeToPerformAll=debut();//oour mesurer le temps global
-            timeToPerformStep=debut();//pour mesurer chaque étape
+            nb_batch_processed_after_warmup++;
+
+            timeToPerformAll=debut();
 
             // Buffer at its maximum size, time to update and clear the buffer
 
-            cerr << "at timestamp: "<< timestamp <<", time to update" << endl;
+            cerr << "--> at timestamp: "<< timestamp <<", time to update" << endl;
 
-            // 1 compute topmost of the buffer
+            //************************************************************************
+            // 1 update datasets
             timeToPerformStep=debut();
-            TableTuple topmostBuffer;
+            mainDataSet.pop_back();
+            ltVcLtUsDs.pop_back();
+            NEG::expiration(ltVcLtUsDs);
+            mainDataSet.push_front(buffer);
+            //************************************************************************
+
+            //************************************************************************
+            //2 compute pairs of newly inserted records
+            valid_data.clear();
+            for (auto it_list=mainDataSet.begin(); it_list!=mainDataSet.end(); it_list++){
+                valid_data.insert(valid_data.begin(), it_list->begin(), it_list->end());
+            }
+            valid_topmost.clear();
             vector<Space> attList;
             for (int j=1;j<=d;j++) attList.push_back(j);
-            ExecuteBSkyTree(attList, buffer, topmostBuffer);//on calcule le topmost du buffer
-
-            cerr << "Step 0 in " << duree(timeToPerformStep)<< " to compute the topmost of the new tuples"<<endl;
-
-            // 2 update main datasets and compute pairs of newly inserted tuples
-            timeToPerformStep=debut();
-            //remove outdated tuples and their respective information
-            //if (mainDataSet.size()==omega/bufferMaxSize){
-
-            mainDataSet.pop_back();//remove the oldest transaction
-            mainTopmost.pop_back();//remove the topmost of the oldest transaction
-            ltVcLtUsDs.pop_back(); //remove the sequence of pairs buckets associated to outdated tuples
-               // double deb=debut();
-            NEG::expiration(ltVcLtUsDs);//it removes the buckets that are associated to the removed transaction
-               // cerr << "L'expiration a pris " << duree(deb)<< endl;
-            //}
-            cerr<<"l'expiration a pris "<<duree(timeToPerformStep)<< endl;
-            timeToPerformStep=debut();
-            //Add th new tuples
-            mainDataSet.push_front(buffer);
-            mainTopmost.push_front(topmostBuffer);
-            NEG::updateNSCt_step1(buffer, mainTopmost, ltVcLtUsDs, d);
+            ExecuteBSkyTree(attList, valid_data, valid_topmost); 
+            NEG::updateNSCt_step1(mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d);
+            cerr << "Update Step 1 in " << duree(timeToPerformStep)<< endl;
+            //*************************************************************************
             
-            cerr << " updateNSCt_step1 in " << duree(timeToPerformStep)<< endl;
-
-            // 3 update the set of existing pairs
+            //*************************************************************************
+            // 3 update set of pairs of existing records
             timeToPerformStep=debut();
+            NEG::updateNSCt_step2(mainDataSet, valid_topmost, old_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, bufferMaxSize);
+            cerr << "Update Step 2 in " << duree(timeToPerformStep)<< endl;
+            //*************************************************************************
             
-            NEG::updateNSCt_step2(topmostBuffer, mainDataSet, ltVcLtUsDs, d);
-
-            cerr << "updateNSCt_step2 in " << duree(timeToPerformStep)<< endl;
-
-            // 5 clear buffer
-            
+            //*************************************************************************
+            // 4 clear buffer and memorize topmost  
             buffer.clear();
-
-            // update done
             cerr << "Update done in " << duree(timeToPerformAll)<< mendl(1);
-            cerr<<endl;
-        }
+            old_topmost.swap(valid_topmost);
+            //*************************************************************************
 
-        if (timestamp==omega+4*bufferMaxSize+query_time){
-            // 4 Set header
+            //*************************************************************************
+            //query answering
             timeToPerformStep=debut();
             structureNSC.clear();
             int structSize=NEG::negativeSkycube(structureNSC, ltVcLtUsDs, d);
             
-            cerr << "Step 4 "<<structSize<<" in " << duree(timeToPerformStep)<< endl;
-            cerr << "Current timestamp" << timestamp<< endl; 
-            
-            // fill valid_data with valid blocs of mainDataSet
-            double deb_remp=omp_get_wtime();
-            TableTuple valid_data;
-
-            for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
-                for(auto it2=it1->begin(); it2!=it1->end();it2++) valid_data.push_back(*it2);
-            }
-            cerr<<"le remplissage de la table des tuples valides a pris"<<omp_get_wtime()-deb_remp<<endl;
-            cerr<<"valid data contient"<<valid_data.size()<<" tuples"<<endl;
-
-            // vector<Space> subspaceN_temp;
-            // vector<vector<Space>> listNTabSpace_temp;
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+100);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+100);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+1000);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+1000);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
-            // subspaceN_temp.insert(subspaceN_temp.begin(),subspaceN.begin(),subspaceN.begin()+10000);
-            // listNTabSpace_temp.insert(listNTabSpace_temp.begin(), vectSpaceN.begin(), vectSpaceN.begin()+10000);
-
-            // //query answering by NSC
-            // NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN_temp, donnees, listNTabSpace_temp, timestamp-query_time-1);
-            // //query answering by BSKYTREE
-            // experimentation_TREE(dataName, valid_data, d, k, listNTabSpace_temp, listNTabSpace_temp);
-            
-            // subspaceN_temp.clear();
-            // listNTabSpace_temp.clear();
-
+            cerr << structSize<<" pairs indexed in " << duree(timeToPerformStep)<< " ms"<< mendl(2);
 
             //query answering by NSC
-            NEG::skylinequery(dataName, structureNSC, valid_data.size(), d, k, subspaceN, donnees, vectSpaceN, timestamp-query_time-1);
-            //query answering by BSKYTREE
-            //valid_data.clear();
-            //valid_data.insert(valid_data.begin(), donnees.begin()+40000,donnees.begin()+140000);
-            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN, vectSpaceN);
-            size_t nbnb=0, nbmin=100000000, nbmax=0;
-            cerr<<"On a "<<ltVcLtUsDs.size()<<" transactions"<<endl;
-            nbnb=0;
-            int ccccc=0;
-            for (auto it_list = ltVcLtUsDs.begin(); it_list != ltVcLtUsDs.end(); it_list++){//pour chaque transaction/batch
-                for (auto it_vector = (*it_list).begin(); it_vector!=(*it_list).end(); it_vector++){//pour chaque tuple t dans le batch/transactin
-                    if((*it_vector).size()<nbmin)nbmin=(*it_vector).size();
-                    if((*it_vector).size()>nbmax)nbmax=(*it_vector).size();
-                    nbnb+=(*it_vector).size();
-                    if((*it_vector).size()>1000) ccccc++;
-                    //(*it_vector).pop_back();//supprimer le plus vieux bucket de paires associé à t
-                }
+            int valid_data_size=0;
+            for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
+               valid_data_size+=(*it1).size();
             }
-            cerr<<"On a un total de "<<nbnb<<" buckets"<<endl;
-            cerr<<"le nombre max de buckets par tuple est" <<nbmax<<" le min est "<<nbmin<<endl;
-            cerr<<"le nombre de tuples avec plus de 1000 buckets est "<<ccccc<<endl;
-            exit(0);
+            NEG::skylinequery(dataName, structureNSC, valid_data_size, d, k, subspaceN);
+            //query answering by BSKYTREE
+            valid_data.clear();
+            valid_data.insert(valid_data.begin(), donnees.begin()+(nb_batch_processed_after_warmup*bufferMaxSize), donnees.begin()+omega+(nb_batch_processed_after_warmup*bufferMaxSize));
+            experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+            cerr<<endl;
+            //*************************************************************************
         }
+
         timestamp++;
     }
 
@@ -262,8 +208,6 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
         // DBSKY = skyline of valid data, we compute it with BSKYTREE
 
         DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], valid_data);
-
-        //cout << "DBSky of subspace: "<< subspace << ", size: "<<DBSky[subspace-1].size()<<endl;
 
         // DBREST = records that are dominated by more recent ones and not dominated by ancient one
 
@@ -344,7 +288,6 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
             }
         }
 
-        //cout << "DBRest of subspace: "<< subspace << ", size: "<<DBRest[subspace-1].size()<<endl;
     }
 
     int DBSky_size=0;
@@ -436,18 +379,16 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         
     // generate subspaces for queries
     Space spAux;
-    Space N=1000; //number of random queries
+    Space N=100; //number of random queries
     Space All=(1<<d)-1; //number of queries in the skycube
     vector<Space> subspaceN;
     vector<vector<Space>> listNTabSpace(N);
     
-    // for skyline
+    // for skylines
     for (int i=1;i<=N;i++){
         spAux=rand() % All + 1;
         subspaceN.push_back(spAux);
-        //cerr<< "space: "<<spAux <<endl;
         listeAttributsPresents(spAux, d, listNTabSpace[i-1]);
-        //displaySubspace(spAux, d);cout<<endl;
     }
 
     // for skycube
@@ -461,11 +402,11 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
     switch (method) {
 
         case 1: 
-            // Run the framework
-            Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceN, listNTabSpace);
+            // Run MSSD
+            Experiment_NSCt( dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
             break;
         case 2: 
-            // Experiment DBSKY
+            // Run DBSKY
             Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
             break;
     }
