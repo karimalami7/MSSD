@@ -14,4 +14,6 @@ void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType
 
 void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize, int method);
 
+void top_k(ListVectorListUSetDualSpace &ltVcLtUsDs, int valid_data_size, int k, int d);
+
 #endif

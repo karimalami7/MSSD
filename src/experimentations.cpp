@@ -6,6 +6,44 @@ void displayResult(string dataName, DataType n, Space d, DataType k, string step
     cerr<<dataName<<" "<<n<<" "<<d<<" "<<k<<" "<<method<<" "<<step<<" "<<structSize<<" "<<timeToPerform<<endl;
 }
 
+void top_k(string dataName, ListVectorListUSetDualSpace &ltVcLtUsDs, int valid_data_size, DataType k, Space d){
+
+    Space All=(1<<d)-1; 
+    vector<bool *> tuples_spaces;
+
+    for (int i=0; i<valid_data_size;i++){
+        bool *spaces = new bool[All];
+        for (int j=0;j<All;j++) spaces[j]=true;
+        tuples_spaces.push_back(spaces);
+    }
+    
+    double timeToPerform=debut();
+
+    int index_tuple=0;
+    for (auto batch: ltVcLtUsDs){
+        for (auto tuple: batch){
+            vector<Space> listCouv;
+            for (auto bucket: tuple){
+                for (auto pair: bucket){
+                    listCouverts(pair.dom, pair.equ, d, listCouv);
+                }
+            }
+            for (Space subspace : listCouv){
+                tuples_spaces[index_tuple][subspace]=false;
+            }
+            index_tuple++;
+        }
+    }
+
+    vector<int> score(valid_data_size,0);
+    for (int i=0; i<tuples_spaces.size(); i++){
+        for (int j=0; j<All; j++) score[i]+=tuples_spaces[i][j];
+    }
+    
+    sort(score.begin(), score.end(), greater<int>());
+
+    displayResult(dataName, valid_data_size, d, k, "topK" , score[0], duree(timeToPerform), "topK");
+}
 
 
 void experimentation_TREE(string dataName, TableTuple donnees, Space d, DataType k, vector<vector<Space>> &vectSpaceN){
@@ -89,6 +127,8 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     valid_data.clear();
     valid_data.insert(valid_data.begin(), donnees.begin()+nb_batch_processed_after_warmup*bufferMaxSize, donnees.begin()+omega+nb_batch_processed_after_warmup*bufferMaxSize);
     experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+    // query top k
+    top_k(dataName, ltVcLtUsDs, valid_data_size, k, d);
     cerr<<endl;
     //*************************************************************************
 
@@ -166,6 +206,8 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             valid_data.clear();
             valid_data.insert(valid_data.begin(), donnees.begin()+(nb_batch_processed_after_warmup*bufferMaxSize), donnees.begin()+omega+(nb_batch_processed_after_warmup*bufferMaxSize));
             experimentation_TREE(dataName, valid_data, d, k, vectSpaceN);
+            // query top k
+            top_k(dataName, ltVcLtUsDs, valid_data_size, k, d);
             cerr<<endl;
             //*************************************************************************
         }
