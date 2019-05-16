@@ -9,35 +9,28 @@ void displayResult(string dataName, DataType n, Space d, DataType k, string step
 void top_k(string dataName, ListVectorListUSetDualSpace &ltVcLtUsDs, int valid_data_size, DataType k, Space d){
 
     Space All=(1<<d)-1; 
-    vector<bool *> tuples_spaces;
-
-    for (int i=0; i<valid_data_size;i++){
-        bool *spaces = new bool[All];
-        for (int j=0;j<All;j++) spaces[j]=true;
-        tuples_spaces.push_back(spaces);
-    }
     
     double timeToPerform=debut();
-
-    int index_tuple=0;
+    vector<int> score(valid_data_size,0);
+    
+    int start_position_for_batch=0;
     for (auto batch: ltVcLtUsDs){
-        for (auto tuple: batch){
+        #pragma omp parallel for schedule(dynamic) 
+        for (int i=0; i<batch.size(); i++){
+            bool *spaces = new bool[All];
+            for (int j=0;j<All;j++) spaces[j]=true;
             vector<Space> listCouv;
-            for (auto bucket: tuple){
+            for (auto bucket: batch[i]){
                 for (auto pair: bucket){
                     listCouverts(pair.dom, pair.equ, d, listCouv);
                 }
             }
             for (Space subspace : listCouv){
-                tuples_spaces[index_tuple][subspace]=false;
+                spaces[subspace]=false;
             }
-            index_tuple++;
+            for (int j=0; j<All; j++) score[i+start_position_for_batch]+=spaces[j];
         }
-    }
-
-    vector<int> score(valid_data_size,0);
-    for (int i=0; i<tuples_spaces.size(); i++){
-        for (int j=0; j<All; j++) score[i]+=tuples_spaces[i][j];
+        start_position_for_batch+=batch.size();
     }
     
     sort(score.begin(), score.end(), greater<int>());
