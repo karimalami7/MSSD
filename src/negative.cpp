@@ -352,41 +352,47 @@ void updateNSCt_step2(list<TableTuple> &mainDataset, TableTuple &valid_topmost, 
     int block_position=1;
     while (it_bloc_data!=mainDataset.end()){
 
-        bool all_yes[it_bloc_data->size()];
-        for (int k=0;k<it_bloc_data->size();k++) all_yes[k]=false;
+        bool completely_dominated[it_bloc_data->size()];
+        for (int k=0;k<it_bloc_data->size();k++) completely_dominated[k]=false;
 
         //**************************************************************************
         // for each tuple t of a transaction
         #pragma omp parallel for schedule(dynamic) 
         for (int i=0; i<(*it_bloc_data).size(); i++){
             USetDualSpace usDS;
+            int smaller_position_all=(*it_bloc_pair)[i].size();
             // for each tuple t' in useful_topmost
             for (int j=0; j <useful_topmost.size();j++){
                 DualSpace ds;
                 ds=NEG::domDualSubspace_1(useful_topmost[j], (*it_bloc_data)[i], d);
-                
-                if (ds.dom==All && useful_topmost[j][0] >= (*it_bloc_data)[i][0]) {all_yes[i]=true;break;}
 
                 // compute where to put the pair
                 int pair_position=mainDataset.size() - block_position - (useful_topmost[j][0]/buffer_size) +decalage;
                 if (pair_position-1>=0)
-                {   auto it=(*it_bloc_pair)[i].begin();;
+                {   auto it=(*it_bloc_pair)[i].begin();
                     for (int m=0;m<pair_position-1;m++) it++;
-                    it->insert(ds);    
+                    if (ds.dom==All) {
+                        if(smaller_position_all>pair_position) smaller_position_all=pair_position;
+                        it->clear();
+                    }     
+                    it->insert(ds);     
                 }
                 else{
                     auto it=(*it_bloc_pair)[i].begin();
+                    if (ds.dom==All) {completely_dominated[i]=true;break;}
                     it->insert(ds);    
+
                 }
             }
             // compress only if the tuple is not totally dominated
-            if(!all_yes[i]){ 
+            if(!completely_dominated[i]){ 
                 vector<list<DualSpace>> pairsToCompress((*it_bloc_pair)[i].size());                
                 int indice=0;
                 for (auto it_list = (*it_bloc_pair)[i].begin() ; it_list!=(*it_bloc_pair)[i].end();it_list++){
                     pairsToCompress[indice].insert(pairsToCompress[indice].begin(),it_list->begin(),it_list->end()); 
                     indice++;
                 }
+                for (int m=smaller_position_all+1;m<pairsToCompress.size();m++) pairsToCompress[m].clear();
                 (*it_bloc_pair)[i].clear();
                 CompresserParInclusion_cascade(pairsToCompress, d, (*it_bloc_pair)[i]);
             }
@@ -397,12 +403,12 @@ void updateNSCt_step2(list<TableTuple> &mainDataset, TableTuple &valid_topmost, 
         //********************************************************************
         // delete completely dominated tuples
         int nb_non_domines=0;
-        for (int i = 0; i<(*it_bloc_data).size();i++){if(!all_yes[i]) nb_non_domines++;}
+        for (int i = 0; i<(*it_bloc_data).size();i++){if(!completely_dominated[i]) nb_non_domines++;}
         VectorListUSetDualSpace bloc_pairs_to_swap(nb_non_domines);
         TableTuple dataset_to_swap(nb_non_domines);
         int j=0;
         for (int i = 0; i<(*it_bloc_data).size();i++){
-            if(!all_yes[i]){
+            if(!completely_dominated[i]){
                 bloc_pairs_to_swap[j]=(*it_bloc_pair)[i];
                 dataset_to_swap[j]=(*it_bloc_data)[i];
                 j++;
