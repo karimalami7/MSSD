@@ -40,6 +40,9 @@ int main(int argc,char **argv){
             if (dataName=="ANTI"||dataName=="INDE"||dataName=="CORR"||dataName=="PERS"){
             k=atoi(optarg);
             path="";
+            }else{
+                k=0;
+                path=optarg;
             }
             break;
         case 'o':
@@ -64,10 +67,15 @@ int main(int argc,char **argv){
         }
     }
 
-
-	loadData(dataName, path, omega*cycles, d, k, donnees);
-    
-    experimentation_menu(dataName, donnees, d, k, path, omega, bufferSize, method);
+    if (path==""){// processing synthetic data
+        cout << "processing synthetic data"<<endl;
+        loadData(dataName, path, omega*cycles, d, k, donnees);
+        experimentation_menu(dataName, donnees, d, k, path, omega, bufferSize, method);
+    }
+    else  {// processing real data
+        cout << "processing real data"<<endl;
+        experimentation_menu_for_real_data("REAL", d, path, omega, bufferSize, method);
+    }
 
     cerr <<"***************End****************"<< endl;
 

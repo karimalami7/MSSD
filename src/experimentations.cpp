@@ -99,7 +99,10 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     double timeToPerformStep;
 
     TableTuple buffer;
-
+    vector<int> blocks_size=vector<int>(omega/bufferMaxSize);
+    for (auto x : blocks_size){
+        x=bufferMaxSize;
+    }
     list<TableTuple> mainDataSet;//une liste de transaction
     list<TableTuple> mainTopmost;//une liste de topmosts
     ListVectorListUSetDualSpace ltVcLtUsDs; //??
@@ -123,7 +126,7 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
     for (int j=1;j<=d;j++) attList.push_back(j);
     valid_data.insert(valid_data.begin(), donnees.begin(), donnees.begin()+omega);
     ExecuteBSkyTree(attList, valid_data, valid_topmost);
-    NEG::InitStructure (mainDataSet, valid_topmost, ltVcLtUsDs, d, bufferMaxSize);
+    NEG::InitStructure (mainDataSet, valid_topmost, ltVcLtUsDs, d, blocks_size);
     cerr << "Structure initialized in " << duree(timeToPerformStep)<< " ms"<< endl;
     //*************************************************************************
 
@@ -229,6 +232,186 @@ void Experiment_NSCt(string dataName, int omega, int bufferMaxSize, TableTuple &
             cerr<<endl;
             //*************************************************************************
         }
+
+        timestamp++;
+    }
+
+}
+
+void Experiment_NSCt_with_real_data(string dataName, int omega, int bufferMaxSize, Space d, string path, vector<Space> &subspaceN, vector<vector<Space>> &vectSpaceN){
+
+    cerr << "omega = " << omega <<endl; 
+    cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
+    cerr << "Space = " << d <<endl;
+    cerr << "Distrib = " << dataName <<mendl(2);
+
+    int timestamp=0;
+
+    double timeToPerformAll;
+    double timeToPerformStep;
+
+    TableTuple buffer;
+    vector<int> blocks_size=vector<int>(omega);
+    vector<int> buffers_startId;
+
+    list<TableTuple> mainDataSet;//une liste de transaction
+    list<TableTuple> mainTopmost;//une liste de topmosts
+    ListVectorListUSetDualSpace ltVcLtUsDs; //??
+    NegSkyStr structureNSC;
+    
+
+    //************************************************************************
+    // before warm up
+    buffers_startId.push_back(0);
+    timeToPerformStep=debut();
+    for (int i=0; i<omega/bufferMaxSize; ++i){
+        string file = path + to_string(i) + ".json";
+        readTextPointList(d, file, buffer, buffers_startId[i]);            
+        mainDataSet.push_front(buffer);
+        blocks_size[i]=buffer.size();
+        buffers_startId.push_back(blocks_size[i]+buffers_startId[i]);
+        buffer.clear();
+    } 
+
+    //cout << " buffers_startId size: " << buffers_startId.size() <<endl;
+    //for (auto x : buffers_startId) cout << " start ids: " << x <<endl;
+
+    timestamp=omega-1;
+    TableTuple valid_data, valid_topmost, old_topmost;
+    vector<Space> attList;
+    for (int j=1;j<=d;j++) attList.push_back(j);
+    for (auto block_dataset : mainDataSet){
+        valid_data.insert(valid_data.begin(), block_dataset.begin(), block_dataset.end());
+    } 
+    int valid_data_size=valid_data.size();
+    cout << "valid data size before warm up: "<<valid_data_size<<endl;
+    ExecuteBSkyTree(attList, valid_data, valid_topmost);
+    cout << "valid topmost size before warm up: "<<valid_topmost.size()<<endl;
+    NEG::InitStructure (mainDataSet, valid_topmost, ltVcLtUsDs, d, blocks_size);
+    cerr << "Structure initialized in " << duree(timeToPerformStep)<< " ms"<< endl;
+    //*************************************************************************
+
+    //*************************************************************************
+    //query answering
+
+    valid_data.clear();
+    for (auto block_dataset : mainDataSet){
+        valid_data.insert(valid_data.begin(), block_dataset.begin(), block_dataset.end());
+    } 
+    valid_data_size=valid_data.size();
+    cout << "valid data size after warm up: "<<valid_data_size<<endl;
+
+    timeToPerformStep=debut();
+    structureNSC.clear();
+    int structSize=NEG::negativeSkycube(structureNSC, ltVcLtUsDs, d);
+    cerr << structSize<<" pairs indexed in " << duree(timeToPerformStep)<< " ms"<< mendl(2);
+
+    //query answering by NSC
+    NEG::skylinequery(dataName, structureNSC, valid_data_size, d, 0, subspaceN);
+    // query top k
+    top_k_v2(dataName, structureNSC, valid_data_size, 0, d);
+    cerr<<endl;
+    //query answering by BSKYTREE
+    valid_data.clear();
+    for (int i=0; i<omega/bufferMaxSize; ++i){
+        string file = path + to_string(i) + ".json";
+        readTextPointList(d, file, buffer, 0);            
+        valid_data.insert(valid_data.begin(), buffer.begin(), buffer.end());
+        buffer.clear();
+    }
+    experimentation_TREE(dataName, valid_data, d, 0, vectSpaceN);
+
+    //*************************************************************************
+
+    //*************************************************************************
+    // after warm up
+
+    int nb_max_batch_after_warmup=3;
+    int nb_batch_processed_after_warmup=0;
+
+    timestamp++;
+
+    while(nb_batch_processed_after_warmup<nb_max_batch_after_warmup){
+
+
+        string file = path + to_string(timestamp) + ".json";
+        readTextPointList(d, file, buffer, buffers_startId[timestamp]);         
+        buffers_startId.push_back(buffer.size()+buffers_startId[timestamp]);
+        //if (buffer.size()==bufferMaxSize){//si le buffer est plein, on déclenche une mise à jour ==> ondéclence le chronomètre
+
+        nb_batch_processed_after_warmup++;
+
+        timeToPerformAll=debut();
+
+        // Buffer at its maximum size, time to update and clear the buffer
+
+        cerr << "--> at timestamp: "<< timestamp <<", time to update" << endl;
+
+        //************************************************************************
+        // 1 update datasets
+        timeToPerformStep=debut();
+        mainDataSet.pop_back();
+        ltVcLtUsDs.pop_back();
+        NEG::expiration(ltVcLtUsDs);
+        mainDataSet.push_front(buffer);
+        //************************************************************************
+
+        //************************************************************************
+        //2 compute pairs of newly inserted records
+        valid_data.clear();
+        for (auto it_list=mainDataSet.begin(); it_list!=mainDataSet.end(); it_list++){
+            valid_data.insert(valid_data.begin(), it_list->begin(), it_list->end());
+        }
+        valid_topmost.clear();
+        vector<Space> attList;
+        for (int j=1;j<=d;j++) attList.push_back(j);
+        ExecuteBSkyTree(attList, valid_data, valid_topmost); 
+        NEG::updateNSCt_step1_real_data(mainDataSet, valid_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, buffers_startId);
+        cerr << "Update Step 1 in " << duree(timeToPerformStep)<< endl;
+        //*************************************************************************
+        
+        //*************************************************************************
+        // 3 update set of pairs of existing records
+        timeToPerformStep=debut();
+        NEG::updateNSCt_step2_real_data(mainDataSet, valid_topmost, old_topmost, nb_batch_processed_after_warmup, ltVcLtUsDs, d, buffers_startId);
+        cerr << "Update Step 2 in " << duree(timeToPerformStep)<< endl;
+        //*************************************************************************
+        
+        //*************************************************************************
+        // 4 clear buffer and memorize topmost  
+        buffer.clear();
+        cerr << "Update done in " << duree(timeToPerformAll)<< mendl(1);
+        old_topmost.swap(valid_topmost);
+        //*************************************************************************
+
+        //*************************************************************************
+        //query answering
+        timeToPerformStep=debut();
+        structureNSC.clear();
+        int structSize=NEG::negativeSkycube(structureNSC, ltVcLtUsDs, d);
+        
+        cerr << structSize<<" pairs indexed in " << duree(timeToPerformStep)<< " ms"<< mendl(2);
+
+        //query answering by NSC
+        int valid_data_size=0;
+        for(auto it1=mainDataSet.rbegin(); it1!= mainDataSet.rend(); it1++ ){
+           valid_data_size+=(*it1).size();
+        }
+        NEG::skylinequery(dataName, structureNSC, valid_data_size, d, 0, subspaceN);
+        //query answering by BSKYTREE
+        valid_data.clear();
+        for (int i=nb_batch_processed_after_warmup; i<omega/bufferMaxSize+nb_batch_processed_after_warmup; ++i){
+            string file = path + to_string(i) + ".json";
+            readTextPointList(d, file, buffer, 0);            
+            valid_data.insert(valid_data.begin(), buffer.begin(), buffer.end());
+            buffer.clear();
+        }
+        experimentation_TREE(dataName, valid_data, d, 0, vectSpaceN);
+        // query top k
+        top_k_v2(dataName, structureNSC, valid_data_size, 0, d);
+        cerr<<endl;
+        //*************************************************************************
+        //}
 
         timestamp++;
     }
@@ -434,6 +617,215 @@ void Experiment_DBSky(string dataName, int omega, int bufferMaxSize, TableTuple 
     cout << "Duration: " << duree(timeToPerformAll)<<endl;
 }
 
+void Experiment_DBSky_with_real_data(string dataName, int omega, int bufferMaxSize, Space d, string path, vector<Space> &subspaceN, vector<vector<Space>> &vectSpaceN){
+
+    cerr << "DBSky" << endl;
+    cerr << "omega = " << omega <<endl; 
+    cerr << "bufferMaxSize = " << bufferMaxSize <<endl;
+    cerr << "Space = " << d <<endl;
+
+    
+
+    double timeToPerformAll;
+    double timeToPerformStep;
+
+    TableTuple buffer;
+
+    list<TableTuple> mainDataSet;
+    list<TableTuple> mainTopmost;
+    Space All=(1<<d);
+    vector<TableTuple> DBSky(All);
+    vector<TableTuple> DBRest(All);
+
+    // before warm up
+    timeToPerformAll=debut();
+    TableTuple valid_data;
+    for (int i=0; i<omega/bufferMaxSize; ++i){
+        string file = path + to_string(i) + ".json";
+        readTextPointList(d, file, buffer, 0);            
+        valid_data.insert(valid_data.begin(), buffer.begin(), buffer.end());
+        buffer.clear();
+    }
+    cout <<"valid data size " << valid_data.size()<<endl;
+    #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+    for (Space subspace=1;subspace<All;subspace++){
+
+        // DBSKY = skyline of valid data, we compute it with BSKYTREE
+
+        DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], valid_data);
+
+        // DBREST = records that are dominated by more recent ones and not dominated by ancient one
+
+        // 1 compute valid data minus DBSky 
+
+        TableTuple valid_data_minus_dbsky;
+
+        for (int i=0;i<omega;i++){
+            bool found=false;
+            for (int j=0;j<DBSky[subspace-1].size() && DBSky[subspace-1][j][0]<=valid_data[i][0] ;j++){
+                if(valid_data[i][0]==DBSky[subspace-1][j][0]){
+                    found=true;
+                    break;
+                }
+            }
+            if(!found){
+                valid_data_minus_dbsky.push_back(valid_data[i]);
+            }
+        }
+
+        // 2 compare records in valid data minus DBSky to records in DBSky and DBRest
+        vector<Space> list_space;
+        listeAttributsPresents(subspace, d, list_space);
+        for (int i=0; i<valid_data_minus_dbsky.size();i++){
+          
+            bool inDBRest=true;
+            // first compare to DBSky
+            for (int j=0; j<DBSky[subspace-1].size();j++){
+                if(DBSky[subspace-1][j][0]>valid_data_minus_dbsky[i][0]){
+                    bool dominated=true;
+                    int equality=0;
+                    for (auto space=list_space.begin();space!=list_space.end();space++){
+                       
+                        if(valid_data_minus_dbsky[i][(*space)+1]<DBSky[subspace-1][j][(*space)+1]){
+                            dominated=false;
+                            break;
+                        }else if(valid_data_minus_dbsky[i][(*space)+1]==DBSky[subspace-1][j][(*space)+1]){
+                            equality++;
+                        }
+                    }
+            
+                if(dominated==true && equality<list_space.size()){
+                    // the record is dominated
+                    inDBRest=false;
+                    break;
+                    }
+                }
+            }
+            // second compare to DBRest if still inDBRest is true
+            if(inDBRest)
+            {
+                for (int j=0; j<DBRest[subspace-1].size();j++){
+                    if(DBRest[subspace-1][j][0]>valid_data_minus_dbsky[i][0]){
+                        bool dominated=true;
+                        int equality=0;
+                        for (auto space=list_space.begin();space!=list_space.end();space++){
+                           
+                            if(valid_data_minus_dbsky[i][(*space)+1]<DBRest[subspace-1][j][(*space)+1]){
+                                dominated=false;
+                                break;
+                            }else if(valid_data_minus_dbsky[i][(*space)+1]==DBRest[subspace-1][j][(*space)+1]){
+                                equality++;
+                            }
+                        }
+                  
+                    if(dominated==true && equality<list_space.size()){
+                        // the record is dominated
+                        inDBRest=false;
+                        break;
+                        }
+                    }
+                }
+            }
+            // if inDBrest true, we add the record to DBRest
+            if (inDBRest){
+
+                DBRest[subspace-1].push_back(valid_data_minus_dbsky[i]);
+            }
+        }
+
+    }
+
+    int DBSky_size=0;
+    int DBRest_size=0;
+    for (Space subspace=1;subspace<All;subspace++){
+        DBSky_size+=DBSky[subspace-1].size();
+        DBRest_size+=DBRest[subspace-1].size();
+    }
+    cout << "DBSky size: "<<DBSky_size<<endl;
+    cout << "DBrest size: "<<DBRest_size<<endl;
+    cout << "Duration: " << duree(timeToPerformAll)<<endl;
+    // after warm up
+    cout << "--------After warm up--------"<<endl;
+
+    int timestamp=omega;
+    timeToPerformAll=debut();
+
+    while (timestamp<omega+1){
+
+        string file = path + to_string(timestamp) + ".json";
+        readTextPointList(d, file, buffer, 0);   
+        int buffer_index=0;    
+        while (buffer_index<buffer.size()){
+            vector<TableTuple> data_for_dominance_test(All);
+            #pragma omp parallel for num_threads(NB_THREADS) schedule(dynamic)
+            for (Space subspace=1;subspace<All;subspace++){
+
+                // LPM
+                // compare donnees[omega] to all records in DBSKY
+
+                //cout <<"++++++LPM++++++"<<endl;
+
+                //cout << "subspace: "<< subspace<< endl;
+                data_for_dominance_test[subspace]=DBSky[subspace-1];
+
+                data_for_dominance_test[subspace].push_back(buffer[buffer_index]);
+
+                DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], data_for_dominance_test[subspace]);
+
+                bool found=false;
+                for (auto it_DBSky=DBSky[subspace-1].begin();it_DBSky!=DBSky[subspace-1].end();it_DBSky++){
+                    if(buffer[buffer_index][0]==(*it_DBSky)[0]){
+                        found=true; 
+                        break;
+                    }
+                }
+                if (!found){
+                    DBRest[subspace-1].push_back(buffer[buffer_index]);
+                    //cout << "record "<< timestamp<<" dominated, added to DBRest "<<endl; 
+                }
+                else{
+                    //cout << "record "<< timestamp<<" added to DBSky "<<endl;
+                }
+            
+                // LMM
+                
+                //cout <<"++++++LMM++++++"<<endl;
+
+                if(valid_data[0][0]==DBRest[subspace-1][0][0]){
+                    //cout << "record in DBRest: "<< DBRest[subspace-1][0][0] << " outdated"<<endl;
+                    DBRest[subspace-1].erase(DBRest[subspace-1].begin());
+                }
+                else{
+                    for (int i=0; i<DBSky[subspace-1].size();i++){
+                        if(valid_data[0][0]==DBSky[subspace-1][i][0]){
+                            //remove DBSky[subspace-1][i]
+                            //cout << "record in DBSky: "<< DBSky[subspace-1][i][0] << " outdated"<<endl;
+                            DBSky[subspace-1].erase(DBSky[subspace-1].begin()+i);
+                            data_for_dominance_test[subspace]=DBSky[subspace-1];
+                            auto it=data_for_dominance_test[subspace].begin();
+                            data_for_dominance_test[subspace].insert(it,DBRest[subspace-1].begin(),DBRest[subspace-1].end());
+                            DBSky[subspace-1]=subspaceSkylineSize_TREE(vectSpaceN[subspace-1], data_for_dominance_test[subspace]);
+                            break;
+                        }
+                    }
+                }    
+            } 
+            buffer_index++;
+        }
+        buffer.clear();
+        timestamp++;
+    }
+
+    DBSky_size=0;
+    DBRest_size=0;
+    for (Space subspace=1;subspace<All;subspace++){
+        DBSky_size+=DBSky[subspace-1].size();
+        DBRest_size+=DBRest[subspace-1].size();
+    }
+    cout << "DBSky size: "<<DBSky_size<<endl;
+    cout << "DBrest size: "<<DBRest_size<<endl;
+    cout << "Duration: " << duree(timeToPerformAll)<<endl;
+}
 
 void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, string path, int omega, int bufferSize, int method){
         
@@ -468,6 +860,43 @@ void experimentation_menu(string dataName, TableTuple &donnees, Space d, int k, 
         case 2: 
             // Run DBSKY
             Experiment_DBSky(dataName,  omega,  bufferSize,  donnees,  d,  k,  path, subspaceAll, listAllTabSpace);
+            break;
+    }
+}
+
+void experimentation_menu_for_real_data(string dataName, Space d, string path, int omega, int bufferSize, int method){
+        
+    // generate subspaces for queries
+    Space spAux;
+    Space N=100; //number of random queries
+    Space All=(1<<d)-1; //number of queries in the skycube
+    vector<Space> subspaceN;
+    vector<vector<Space>> listNTabSpace(N);
+    
+    // for skylines
+    for (int i=1;i<=N;i++){
+        spAux=rand() % All + 1;
+        subspaceN.push_back(spAux);
+        listeAttributsPresents(spAux, d, listNTabSpace[i-1]);
+    }
+
+    // for skycube
+    vector<Space> subspaceAll;
+    vector<vector<Space>> listAllTabSpace(All);
+    for (int i=1;i<=All;i++){
+        subspaceAll.push_back(i);
+        listeAttributsPresents(i, d, listAllTabSpace[i-1]);
+    }
+
+    switch (method) {
+
+        case 1: 
+            // Run MSSD
+            Experiment_NSCt_with_real_data( dataName, omega, bufferSize, d, path, subspaceAll, listAllTabSpace);
+            break;
+        case 2: 
+            // Run DBSKY
+            Experiment_DBSky_with_real_data(dataName,  omega,  bufferSize,  d,  path, subspaceAll, listAllTabSpace);
             break;
     }
 }

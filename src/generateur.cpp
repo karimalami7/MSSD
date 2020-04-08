@@ -51,6 +51,34 @@ void readTextPointList(int n, int d, string strFileName, vector<Point> &result){
 	result.swap(PointList);
 }
 
+void readTextPointList(int d, string strFileName, vector<Point> &result, int start_id){
+    //cout << "reading file: "<<strFileName<<endl;
+    vector<Point> PointList;
+    string strLine;
+    ifstream inFile (strFileName.c_str());
+    int i=start_id, j, aa;
+    if (inFile.is_open()){
+        while (!inFile.eof()){
+            getline (inFile, strLine,'\n');
+            if(strLine.size()!=0){
+                stringstream sin (stringstream::in | stringstream::out);
+                sin << strLine;
+                Point Value = new DataType[d+1];
+                Value[0]= i++;
+                for (j = 1; j <= d; j++){
+                    sin >> aa;
+                    Value[j]=abs(aa);
+                }
+                sin.clear();
+                PointList.push_back(Value);
+            }
+        }
+
+    } else cout << "There is no File." << endl;
+    inFile.close();
+    result.swap(PointList);
+}
+
 void dataDoubleToInt(vector<double*> &dataDouble, Space d, DataType k, vector<Point> &result){
     DataType i, n=dataDouble.size();
     Point unTuple;

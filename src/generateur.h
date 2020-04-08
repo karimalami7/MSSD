@@ -8,10 +8,11 @@ void normaliseDonnees(TableTuple &donnees, Space d, TableTuple &sortie);
 
 void readTextPointList(int n, int d, string strFileName, vector<Point> &result);
 
+void readTextPointList(int d, string strFileName, vector<Point> &result, int start_id);
+
 void dataDoubleToInt(vector<double*> &dataDouble, Space d, DataType k, vector<Point> &result);
 
 void maVisionAnticorrelation(vector<double*> &resultD, int d);
-
 
 void loadData(string dataName, string path, int n, int d, int &k, vector<Point> &result);
 
