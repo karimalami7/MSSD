@@ -10,3 +10,5 @@ src/DBSky_MC_INDE.out
 twitter_api_pipeline/__pycache__/
 mssd_spark/__pycache__/
 twitter_api_pipeline/twitter_api_credentials.py
+mssd_spark/NSCt/*
+mssd_spark/receivedData/*
