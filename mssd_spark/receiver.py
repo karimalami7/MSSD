@@ -10,6 +10,7 @@ from pyspark.sql import Row, SparkSession
 import sys
 
 import twitter_data_schema
+import NSC_UpdateProcess
 
 # gloqb counter for storage
 id_transaction=0
@@ -31,11 +32,21 @@ def process(time, rdd):
         # Get the singleton instance of SparkSession
         spark = getSparkSessionInstance(rdd.context.getConf())
 
+        print("New transaction id is: ", id_transaction)
+
         deltaSetDf = spark.createDataFrame(rdd, twitter_data_schema.attributes)
         fileName="receivedData//transaction_%s" % (id_transaction)
-        id_transaction=id_transaction+1
         #deltaSetDf.show()
         deltaSetDf.write.save(fileName, format="parquet")
+
+        print("Start loading data to RDDs")
+        nsc_update_session= NSC_UpdateProcess.NSC_update_process(id_transaction, spark)
+        print("Computing Pairs for Newly inserted tuples")
+        nsc_update_session.computePairs_Ntuple() # compute pairs of newly inserted tuples wrt valid tuples
+        print("Computing Pairs for Valid tuples")
+        nsc_update_session.computePairs_VTuple() # compute pairs of valid tuple wrt new tuples
+
+        id_transaction=id_transaction+1
     
     except BaseException as e:
         print("Error in processing RDDs: %s" % str(e))
@@ -48,6 +59,7 @@ def Main():
         print("Usage: receiver.py <hostname> <port>", file=sys.stderr)
         sys.exit(-1)
     sc = SparkContext(appName="PythonStreamingNetworkWordCount")
+    sc.addPyFile("NSC_UpdateProcess.py")
     ssc = StreamingContext(sc, 5)
     
     streamed_tuples = ssc.socketTextStream(sys.argv[1], int(sys.argv[2]))
