@@ -4,6 +4,17 @@
 
 This repository includes MSSD sources as well as state of the art methods to answer subspace skyline queries over streaming data.
 
+If you consider **MSSD** in your work, please cite:
+
+    @article{alami2020framework,
+      title={A framework for multidimensional skyline queries over streaming data},
+      author={Alami, Karim and Maabout, Sofian},
+      journal={Data \& Knowledge Engineering},
+      pages={101792},
+      year={2020},
+      publisher={Elsevier}
+    }
+
 ### Compile and run
 
 To begin, please clone this repository. This software requires C++ compiler.
