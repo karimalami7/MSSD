@@ -1,6 +1,6 @@
 # MSSD: Multidimensional Skylines Over Streaming Data
 
-### Repository organization
+## Repository organization
 
 This repository includes MSSD sources as well as state of the art methods to answer subspace skyline queries over streaming data.
 
@@ -15,7 +15,7 @@ If you consider **MSSD** in your work, please cite:
       publisher={Elsevier}
     }
 
-### Compile and run C++ implementation
+## Compile and run C++ implementation
 
 To begin, please clone this repository. This software requires C++ compiler.
 
@@ -59,9 +59,9 @@ Arguments to define in the file [run.sh](https://github.com/MultiStreamSky/MSSD/
 
 7. Batch interval
 
-### Run Spark implementation
+## Run Spark implementation
 
-## Start services for standalone cluster
+### Start services for standalone cluster
 
 ```shell
 {spark_home}/sbin/start-all.sh
@@ -69,7 +69,7 @@ Arguments to define in the file [run.sh](https://github.com/MultiStreamSky/MSSD/
 {kafka_home}/bin/kafka-server-start.sh config/server.properties
 ```
 
-## Run with twitter API through TCP
+### Run with twitter API through TCP
 
 ```shell
 cd twitter_api_pipeline/
@@ -79,7 +79,7 @@ python3 twitter_api_pipeline.py
 cd mssd_spark/
 {spark_home}/bin/spark-submit TcpSocket_receiver.py localhost 9010
 ```
-## Run with data from Kafka
+### Run with data from Kafka
 
 ```shell
 cd mssd_spark/
