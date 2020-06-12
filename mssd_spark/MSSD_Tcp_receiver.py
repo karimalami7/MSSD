@@ -46,11 +46,11 @@ def process(time, rdd):
         nsc_update_session.computePairs_Ntuple() # compute pairs of newly inserted tuples wrt valid tuples
         print("Computing Pairs for Valid tuples")
         nsc_update_session.computePairs_VTuple() # compute pairs of valid tuple wrt new tuples
-
-        id_transaction=id_transaction+1
     
     except BaseException as e:
         print("Error in processing RDDs: %s" % str(e))
+
+    id_transaction=id_transaction+1
 
 def Main(): 
 
@@ -59,7 +59,7 @@ def Main():
     if len(sys.argv) != 3:
         print("Usage: receiver.py <hostname> <port>")
         sys.exit(-1)
-    sc = SparkContext(appName="PythonStreamingNetworkWordCount")
+    sc = SparkContext(appName="MSSD with Tcp Socket")
     sc.addPyFile("NSC_UpdateProcess.py")
     ssc = StreamingContext(sc, 5)
     

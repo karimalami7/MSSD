@@ -15,3 +15,4 @@ mssd_spark/receivedData/*
 mssd_spark/NSC_UpdateProcess.pyc
 mssd_spark/deploy on google cloud platform
 mssd_spark/twitter_data_schema.pyc
+twitter_api_pipeline/tweets.txt
