@@ -2,11 +2,12 @@
 #
 # created: 22/03/2020
 #
-# receives tweets data each theta units of times and stores them in parquet format
+# (i) consumes data each theta units of times from Kafka, (ii) updates the structure and (iii) stores everything in parquet format
 
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.sql import Row, SparkSession
+from pyspark.streaming.kafka import KafkaUtils
 import sys
 
 import twitter_data_schema
@@ -45,25 +46,27 @@ def process(time, rdd):
         nsc_update_session.computePairs_Ntuple() # compute pairs of newly inserted tuples wrt valid tuples
         print("Computing Pairs for Valid tuples")
         nsc_update_session.computePairs_VTuple() # compute pairs of valid tuple wrt new tuples
-
-        id_transaction=id_transaction+1
     
     except BaseException as e:
         print("Error in processing RDDs: %s" % str(e))
+    
+    id_transaction=id_transaction+1
 
 def Main(): 
 
     #### receive tuples and store them
 
     if len(sys.argv) != 3:
-        print("Usage: receiver.py <hostname> <port>", file=sys.stderr)
+        print("Usage: receiver.py <kafka_port> <topic>")
         sys.exit(-1)
-    sc = SparkContext(appName="PythonStreamingNetworkWordCount")
+    sc = SparkContext(appName="MSSD with kafka stream")
     sc.addPyFile("NSC_UpdateProcess.py")
     ssc = StreamingContext(sc, 5)
     
-    streamed_tuples = ssc.socketTextStream(sys.argv[1], int(sys.argv[2]))
-    streamed_tuples = streamed_tuples.map(lambda tweets: tweets.split(","))
+
+    brokers, topic = sys.argv[1:]
+    streamed_tuples = KafkaUtils.createDirectStream(ssc, [topic], {"metadata.broker.list": brokers})
+    streamed_tuples = streamed_tuples.map(lambda tweets: tweets[1].split(","))
     #streamed_tuples.pprint()
     streamed_tuples.foreachRDD(process)
 

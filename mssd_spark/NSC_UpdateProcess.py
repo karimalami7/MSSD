@@ -60,12 +60,10 @@ class NSC_update_process:
 			self.pairs_computation(self.valid_tuples_rdd[i], i, self.new_tuples_rdd, self.new_transaction_id)
 
 
-
-
 def Main():
 
 	if len(sys.argv) != 2:
-		print("Usage: NSC_UpdateProcess.py <new_transaction_id>", file=sys.stderr)
+		print("Usage: NSC_UpdateProcess.py <new_transaction_id>")
 		sys.exit(-1)
 
 	print("New transaction id is: ", sys.argv[1])

@@ -15,7 +15,7 @@ If you consider **MSSD** in your work, please cite:
       publisher={Elsevier}
     }
 
-### Compile and run
+### Compile and run C++ implementation
 
 To begin, please clone this repository. This software requires C++ compiler.
 
@@ -58,3 +58,31 @@ Arguments to define in the file [run.sh](https://github.com/MultiStreamSky/MSSD/
 6. Number of parallel threads to be run.
 
 7. Batch interval
+
+### Run Spark implementation
+
+## Start services for standalone cluster
+
+```shell
+{spark_home}/sbin/start-all.sh
+{kafka_home}/bin/zookeeper-server-start.sh config/zookeeper.properties
+{kafka_home}/bin/kafka-server-start.sh config/server.properties
+```
+
+## Run with twitter API through TCP
+
+```shell
+cd twitter_api_pipeline/
+python3 twitter_api_pipeline.py
+```
+```shell
+cd mssd_spark/
+{spark_home}/bin/spark-submit TcpSocket_receiver.py localhost 9010
+```
+## Run with data from Kafka
+
+```shell
+cd mssd_spark/
+python3 kafka_producer.py
+{spark_home}/bin/spark-submit --packages org.apache.spark:spark-streaming-kafka-0-8-assembly_2.11:2.4.3 Kafka_receiver.py localhost:9092 twitter_topic
+```

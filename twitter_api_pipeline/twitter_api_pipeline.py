@@ -38,6 +38,9 @@ class TwitterListenerAndSender(StreamListener):
             tweet_data=str(tweet_id)+","+str(user_id)+","+str(user_followers_count)+","+str(user_friends_count)+","+\
                 str(user_listed_count)+","+str(user_favourites_count)+","+str(user_statuses_count)
 
+            with open("tweets.txt","a") as t:
+                t.write(tweet_data+"\n")
+
             conn.send((tweet_data+"\n").encode("utf-8"))
             return True
         except BaseException as e:

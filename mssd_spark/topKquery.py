@@ -9,7 +9,7 @@ from pyspark.sql import Row, SparkSession
 from itertools import combinations, product
 
 
-# 1/ load all paris to RDD
+# 1/ load all pairs to RDD
 
 def couv_pair(tuple_pair):
 
@@ -44,7 +44,9 @@ class NSC:
 def Main():
 
 	spark = SparkSession.builder.getOrCreate()
-
+	if len(sys.argv) != 2:
+		print("Usage: topKquery.py <K>")
+		sys.exit(-1)
 	nsc = NSC(spark)
 	print("Start loading pairs to RDDs")
 	nsc.load_pairs()
@@ -52,7 +54,7 @@ def Main():
 	nsc.tuples_dominance_set()
 	print("Creating a dataFrame")
 	df = spark.createDataFrame(nsc.tuple_couv)
-	df.orderBy('dominance').limit(10).show()
+	df.orderBy('dominance').limit(int(sys.argv[1])).show()
 
 if __name__=="__main__":
 	Main()
